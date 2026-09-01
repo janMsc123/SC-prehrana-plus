@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Prehrana Plus{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if user and not hide_nav %}
+<nav>
+  <a class="brand" href="/">Prehrana&nbsp;Plus</a>
+  <a href="/week">Teden</a>
+  <a href="/rank">Ocenjevanje</a>
+  <a href="/meals">Jedi</a>
+  <a href="/review">
+    Ujemanja
+    {% if pending_questions %}<span class="badge">{{ pending_questions }}</span>{% endif %}
+  </a>
+  <a href="/suggest">Predlogi</a>
+  <span class="spacer"></span>
+  <span class="who">{{ user.first_name or user.username }}</span>
+  <form method="post" action="/logout"><button class="link">Odjava</button></form>
+</nav>
+{% endif %}
+
+<main>
+  {% if user and pending_questions and request.url.path != '/review' %}
+  <div class="notice">
+    <strong>{{ pending_questions }}</strong> jedi je videti podobnih, a niso enake.
+    Dokler ne odgovoriš, se njihove ocene štejejo ločeno.
+    <a href="/review">Poglej vprašanja &rarr;</a>
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  Prehrana Plus &middot; bere šolski jedilnik in naroča po tvojem okusu
+  {% if not place_orders %}<span class="warn">&middot; naročanje je izklopljeno</span>{% endif %}
+</footer>
+</body>
+</html>

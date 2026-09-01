@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Jedi &middot; Prehrana Plus{% endblock %}
+{% block content %}
+<h1>Tvoj vrstni red</h1>
+<p class="sub">
+  Od najljubše navzdol. Po tem se odloča tedensko naročanje &mdash;
+  povleci jed gor ali dol, če ti kaj ne ustreza.
+</p>
+
+{% if new_count %}
+<div class="notice">
+  <strong>{{ new_count }}</strong> {{ 'nova jed se je' if new_count == 1 else 'novih jedi se je' }}
+  pojavila na jedilniku in {{ 'je uvrščena' if new_count == 1 else 'so uvrščene' }} po oceni.
+  Poišči oznako <span class="tag new">NOVO</span> in {{ 'jo' if new_count == 1 else 'jih' }}
+  po potrebi premakni.
+  <form method="post" action="/meals/acknowledge" class="inline">
+    <button class="link" type="submit" style="color:var(--brand);font-weight:600">
+      V redu, skrij oznake
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{% if ranked %}
+<div class="legend">
+  <span><span class="swatch close"></span> ocena se razlikuje za {{ tie_window }} ali manj &mdash; vrstni red med njima je poljuben</span>
+  <a href="/tutorial" class="muted">kako to deluje?</a>
+</div>
+
+<form method="post" action="/meals/order" id="orderForm">
+  <input type="hidden" name="order" id="orderField">
+  <ol class="ranked draggable" id="mealList">
+    {% for meal in ranked %}
+    <li data-id="{{ meal.id }}" draggable="true"
+        class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
+      <span class="grip" aria-hidden="true">&#10287;</span>
+      <span class="name">{{ meal.name }}</span>
+      {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
+      <span class="meta">
+        {% if meal.score %}<span class="score">{{ meal.score }}</span>{% endif %}
+        <span class="movers">
+          <button type="button" class="move" data-dir="-1" aria-label="Premakni gor">&#9650;</button>
+          <button type="button" class="move" data-dir="1" aria-label="Premakni dol">&#9660;</button>
+        </span>
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="save-bar" id="saveBar" hidden>
+    <span>Vrstni red je spremenjen.</span>
+    <button class="btn" type="submit">Shrani vrstni red</button>
+    <a class="btn ghost" href="/meals">Prekliči</a>
+  </div>
+</form>
+
+<h2>Odstrani jed</h2>
+<p class="muted" style="font-size:.9rem;margin-top:-.4rem">
+  Z &times; jed pade pod MALICA 7 in ne bo nikoli naročena.
+</p>
+<ol class="ranked plain">
+  {% for meal in ranked %}
+  <li>
+    <span class="name" style="font-weight:400">{{ meal.name }}</span>
+    <span class="meta">
+      <form method="post" action="/meals/exclude" class="inline">
+        <input type="hidden" name="meal_id" value="{{ meal.id }}">
+        <button class="link" type="submit" title="Nikoli tega">&times; nikoli</button>
+      </form>
+    </span>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<div class="card">
+  <p>Še nič ni ocenjeno.</p>
+  <a class="btn" href="/rank">Začni ocenjevanje</a>
+</div>
+{% endif %}
+
+{% if others %}
+<h2>Še neocenjene in zavrnjene</h2>
+<ol class="ranked plain">
+  {% for meal in others %}
+  <li>
+    <span class="name" {% if meal.excluded %}style="text-decoration:line-through;opacity:.6"{% endif %}>
+      {{ meal.name }}
+    </span>
+    <span class="meta">
+      {% if meal.excluded %}
+        <span class="tag skip">nikoli</span>
+        <form method="post" action="/meals/unexclude" class="inline">
+          <input type="hidden" name="meal_id" value="{{ meal.id }}">
+          <button class="link" type="submit">vrni</button>
+        </form>
+      {% else %}
+        <span class="tag skip">ni ocenjena</span>
+      {% endif %}
+    </span>
+  </li>
+  {% endfor %}
+</ol>
+<p class="actions"><a class="btn ghost" href="/rank">Oceni manjkajoče</a></p>
+{% endif %}
+
+<script>
+(function () {
+  var list = document.getElementById('mealList');
+  if (!list) return;
+  var form = document.getElementById('orderForm');
+  var field = document.getElementById('orderField');
+  var bar = document.getElementById('saveBar');
+  var original = ids();
+
+  function ids() {
+    return Array.prototype.map.call(list.children, function (li) {
+      return li.dataset.id;
+    });
+  }
+
+  function renumber() {
+    var now = ids();
+    var changed = now.join(',') !== original.join(',');
+    bar.hidden = !changed;
+    field.value = now.join(',');
+  }
+
+  // Arrow buttons: the reliable path on touch screens and with a keyboard.
+  list.addEventListener('click', function (event) {
+    var button = event.target.closest('.move');
+    if (!button) return;
+    var li = button.closest('li');
+    var dir = parseInt(button.dataset.dir, 10);
+    if (dir < 0 && li.previousElementSibling) {
+      list.insertBefore(li, li.previousElementSibling);
+    } else if (dir > 0 && li.nextElementSibling) {
+      list.insertBefore(li.nextElementSibling, li);
+    }
+    renumber();
+    button.focus();
+  });
+
+  // Pointer dragging: one code path for mouse, pen and touch.
+  var dragging = null;
+  list.addEventListener('pointerdown', function (event) {
+    if (event.target.closest('.move')) return;
+    var li = event.target.closest('li');
+    if (!li) return;
+    dragging = li;
+    li.classList.add('dragging');
+    li.setPointerCapture(event.pointerId);
+  });
+
+  list.addEventListener('pointermove', function (event) {
+    if (!dragging) return;
+    event.preventDefault();
+    var under = document.elementFromPoint(event.clientX, event.clientY);
+    var target = under && under.closest ? under.closest('li') : null;
+    if (!target || target === dragging || target.parentNode !== list) return;
+    var box = target.getBoundingClientRect();
+    var below = event.clientY > box.top + box.height / 2;
+    list.insertBefore(dragging, below ? target.nextSibling : target);
+  });
+
+  function endDrag() {
+    if (!dragging) return;
+    dragging.classList.remove('dragging');
+    dragging = null;
+    renumber();
+  }
+  list.addEventListener('pointerup', endDrag);
+  list.addEventListener('pointercancel', endDrag);
+
+  // Make sure a submit always carries the current order.
+  form.addEventListener('submit', function () { field.value = ids().join(','); });
+})();
+</script>
+{% endblock %}

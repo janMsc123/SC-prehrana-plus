@@ -1,0 +1,932 @@
+[
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "CORDON BLUE (mleko, pšenica), DODATEK LIMONA , MENI SOLATA (žveplov dioksid), NAPITEK , TESTENINSKA SOLATA (gorčično seme, jajca, pšenica)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "ČEVAPČIČI (Govedina, Svinjina), , BOMBETA (ječmen, mleko, pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , ŽAR DODATEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "OCVRT FILE  OSLIČA (Ribje in morske jedi), (jajca, mleko, pšenica, ribe), DODATEK LIMONA , KROMPIRJEVA SOLATA (gorčično seme), KRUH (pšenica, soja), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "MAKARONOVO MESO (PURANJI) (pšenica, soja, zelena), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-01",
+  "day_of_week": "2",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "ČUFTI V PARADIŽNIKOVI OMAKI (Govedina, Svinjina), (pšenica, soja, zelena), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PIRE KROMPIR (mleko)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "SVINJSKI ZREZEK (Svinjina), , KRUH (pšenica, soja), KRUHOVA REZINA (jajca, mleko, pšenica), MENI SOLATA (žveplov dioksid), NAPITEK , OMAKA NARAVNA SVETLA (jajca, zelena, žveplov dioksid)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "RIŽOTA S PIŠČANCEM , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "ŠPAGETI PO BOLONJSKO (Govedina, Svinjina), (pšenica, soja, zelena, žveplov dioksid), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "PIŠČANČJI FILE , AJDOVA KAŠA , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , OMAKA SMETANOVA (mleko, pšenica, soja, žveplov dioksid)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJI ZREZEK DUNAJSKI (jajca, mleko, pšenica), DODATEK LIMONA , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PEČEN KROMPIR",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "NJOKI (jajca, pšenica), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , OMAKA CARBONARA (jajca, mleko, pšenica, soja), PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "SESEKLJAN ZREZEK (jajca, mleko, pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PIRE KROMPIR (mleko), ŠPINAČA (mleko, mlečni izdelek, pšenica, soja)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "170ab213-0adf-4eac-acf7-f75a2e60cb8e",
+  "menu_name": "MALICA 1",
+  "sort_order": 1,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "PIŠČANČJI FILE , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , OMAKA NARAVNA SVETLA (jajca, pšenica, zelena, žveplov dioksid), RIZI BIZI",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "SAM TESTENINE S ŠPARGLJI IN MOZZA SŠ (mleko, mlečni izdelek, pšenica, žveplov dioksid), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "SKUTNI ŠTRUKLJI (jajca, mleko, mlečni izdelek, pšenica, rž), KRUH (pšenica, soja), MEŠAN KOMPOT , NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "MLEČNI RIŽ (mleko, mlečni izdelek, pšenica), BANANA , NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "SPOMLADANSKI ZVITKI (jajca, pšenica, rž, sezam, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , RIZI BIZI , SLADKO-KISLA OMAKA (zelena)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "ZELENJAVNI POLPET (jajca, pšenica, soja, zelena), KRUH (pšenica, soja), NAPITEK , OMAKA SALSA , POLNOZRNATE TESTENINE (pšenica), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "ZELENJAVNA MUSAKA (jajca, mleko, mlečni izdelek, pšenica, soja), KRUH (pšenica, soja), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "TERIYAKI STICKI TOFU RIŽ (pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "ŠPAGETI  S SOJINO HAŠE OMAKO (pšenica, soja, žveplov dioksid), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "ZELENJAVNA LAZANJA (jajca, mleko, mlečni izdelek, pšenica, soja), KRUH (pšenica, soja), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "CARSKI PRAŽENEC (jajca, mleko, pšenica), KRUH (pšenica, soja), MEŠAN KOMPOT , NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-01",
+  "day_of_week": "2",
+  "menu_description": "SENDVIČ ŠUNKA SIR BAGETA (Svinjina), (gorčično seme, jajca, mleko, mlečni izdelek, pšenica, rž, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "POLŽKI Z LEČINIM BOLOGNEZOM (mlečni izdelek, pšenica, soja, žveplov dioksid), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "NJOKI (jajca, pšenica), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , OMAKA ARRABIATA (soja, zelena), PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "4d0ebb3b-d6e3-4d43-a292-ea682e5393ad",
+  "menu_name": "MALICA 2",
+  "sort_order": 2,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "CURRY S ČIČERIKO IN EKO BULGUR* (mleko, pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "MESNA MUSAKA (Govedina, Svinjina), (jajca, mleko, mlečni izdelek, pšenica), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "PIŠČANČJA ENCHILADA (gorčično seme, jajca, ječmen, mleko, mlečni izdelek, oves, pšenica), BELA SALSA MEHIŠKA (gorčično seme, mleko, mlečni izdelek), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "ENOLONČNICA CHILI CON CARNE (Govedina), (gorčično seme, mlečni izdelek, pšenica), JABOLČNI ZAVITEK (jajca, mleko, mlečni izdelek, pšenica), KRUH (pšenica, soja), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "CURRY S PIŠČANCEM (mleko, mlečni izdelek, pšenica, soja, zelena), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PIRE KROMPIR (mleko)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "SLADKO-KISLA SVINJINA (pšenica, soja, zelena), BASMATI RIŽ , MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "MESNA LAZANJA (jajca, mleko, mlečni izdelek, pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "TERIYAKI STICKI PIŠČANČJI RIŽ (pšenica, soja), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "ŠPAGETI S TUNINO OMAKO (Ribje in morske jedi), (jajca, mlečni izdelek, pšenica), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK , PARMEZAN (mlečni izdelek)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "RIBJI CURRY S KOKOSOVIM MLEKOM (Ribje in morske jedi), (mleko, ribe, soja), KRUH (pšenica, soja), MASLENI KROMPIR (mlečni izdelek, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "PAD THAI S PIŠČANCEM (arašidi, jajca, pšenica, ribe, soja), DODATEK LIMONA , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJI SAUTE (mleko, mlečni izdelek, pšenica, soja, zelena, žveplov dioksid), DUŠEN RIŽ , KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "TORTILJA PIŠČANČJA (gorčično seme, jajca, ječmen, mleko, mlečni izdelek, oves, pšenica), KRUH (pšenica, soja), MENI SOLATA (žveplov dioksid), NACHO SIR (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "bce07cdb-1837-4b79-883c-8ef017821c59",
+  "menu_name": "MALICA 3",
+  "sort_order": 3,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "RIČET S KLOBASO (Govedina, Svinjina), (ječmen, pšenica, zelena), KROF (jajca, mleko, pšenica, soja), KRUH (pšenica, soja), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "HOT DOG (gorčično seme, jajca, ječmen, mleko, pšenica, soja, žveplov dioksid), JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "TUNIN WRAP (Ribje in morske jedi), (gorčično seme, jajca, ječmen, oves, pšenica, ribe), NAPITEK , PUDING BREZ SMETANE (mleko, soja), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "MESNI BUREK (Govedina), (jajca, mleko, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "BAGEL S PIŠČANCEM (gorčično seme, jajca, ječmen, mleko, mlečni izdelek, pšenica, soja, žveplov dioksid), BANANA , JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "BOMBETKA MORTADELA SIR (Svinjina), (jajca, ječmen, mleko, mlečni izdelek, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "WRAP MOZZARELLA - PESTO (ječmen, mlečni izdelek, oves, pšenica), NAPITEK , PUDING BREZ SMETANE (mleko, soja), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "CHEESBURGER (Govedina, Svinjina), (gorčično seme, jajca, ječmen, mleko, mlečni izdelek, pšenica, sezam, soja, zelena, žveplov dioksid), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "BOMBETKA S SUHO SALAMO IN SIROM (Govedina, Svinjina), (jajca, mlečni izdelek, pšenica, rž, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "PIZZA S ŠUNKO (Svinjina), (jajca, mleko, mlečni izdelek, pšenica), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "WRAP S HUMUSOM IN ZELENJAVO (ječmen, oves, pšenica), NAPITEK , PUDING BREZ SMETANE (mleko, soja), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "HAMBURGER (Govedina, Svinjina), (gorčično seme, jajca, ječmen, mleko, pšenica, sezam, soja, zelena), JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "SENDVIČ CHICKEN CLUB S SLANINO (gorčično seme, jajca, mlečni izdelek), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "a6e0746b-0081-4aeb-898f-626e63b4f308",
+  "menu_name": "MALICA 4",
+  "sort_order": 4,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "ROGLJIČEK PIŠČANČJA PRSA-MOZZARELLA (jajca, mleko, mlečni izdelek, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "BOMBETKA S SUHO SALAMO IN SIROM (Govedina, Svinjina), (jajca, mlečni izdelek, pšenica, rž, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "SENDVIČ S TUNO (Ribje in morske jedi), (ječmen, mleko, pšenica, ribe, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "SIROVA ŠTRUČKA (mleko, mlečni izdelek, pšenica), FIT ŽITNA PLOŠČICA (ječmen, mleko, oves, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "SEND PREK VRATOVINA PRŠUT MAKOVKA , JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "BOMBETKA MORTADELA SIR (Svinjina), (jajca, ječmen, mleko, mlečni izdelek, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "SENDVIČ ŠUNKA SIR BAGETA (Svinjina), (gorčično seme, jajca, mleko, mlečni izdelek, pšenica, rž, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "SENDVIČ POLNOZRNATI PIŠČ.PRSA-KREMNI SIR (mleko, mlečni izdelek, pira, pšenica, rž), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "SENDVIČ BAGETA SIR-JAJCE (jajca, ječmen, mleko, mlečni izdelek, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "MAKOVA ŠTRUČKA (mleko, mlečni izdelek, pšenica, soja), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "JABOLČNI ZAVITEK (pšenica), BANANA , NAPITEK , ČOKOLADNO MLEKO (mleko)",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "AMERIŠKE PALAČINKE S SADJEM (jajca, mleko, pšenica), BANANA , JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "VAFLJI S SADJEM IN MEDOM (jajca, mleko, mlečni izdelek, pšenica), BANANA , JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "9755a6c8-f03d-4a37-a579-050cb35ea176",
+  "menu_name": "MALICA 5",
+  "sort_order": 5,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "ROGLJIČEK S SEMENI 2 KOS (jajca, ječmen, mleko, oves, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "GRANOLA ČOKOLADNA (arašidi, mleko, soja), BISKVITNA REZINA (jajca, ječmen, mleko, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "HRUSTLJAVI KOSMIČI (ječmen, lešniki, oves, pšenica, soja), JOGURT (mleko, mlečni izdelek), MINI ROLADA (jajca, mleko, mlečni izdelek, pšenica), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "TESTENINSKA ŠUNKA-SIR BOUL (Svinjina), (jajca, mleko, pšenica, žveplov dioksid), NAPITEK , NAVADNI JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "PIŠČANČJA POP CORN BOUL (jajca, mleko, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJA CRISPI BOUL (mleko, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "TESTENINSKA MOZZARELLA BOUL (mlečni izdelek, pšenica, žveplov dioksid), BROWNIE (jajca, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "BAGET PIŠČANČJA ŠUNKA-SIR (jajca, mleko, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "SOLATNI KROŽNIK PIŠČANČJI KEBAB (gorčično seme, jajca, mleko, soja, zelena), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "SENDVIČ BAGETA SIR-JAJCE (jajca, ječmen, mleko, mlečni izdelek, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "BOMBETKA S SUHO SALAMO IN SIROM (Govedina, Svinjina), (jajca, mlečni izdelek, pšenica, rž, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "SADNA SKUTA S SADJEM (mleko, mlečni izdelek, soja), BANANA , FIT ŽITNA PLOŠČICA (ječmen, mleko, oves, pšenica, soja), NAPITEK",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "ŽEMLJA POLI-SIR (gorčično seme, jajca, ječmen, mleko, mlečni izdelek, pšenica, soja), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "dc8167b1-7469-4762-9f48-09193ac3e896",
+  "menu_name": "MALICA 6",
+  "sort_order": 6,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "SOLATNI KROŽNIK CESARSKI (jajca, mleko, mlečni izdelek, pšenica), JOGURT (mleko, mlečni izdelek), NAPITEK , SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-08",
+  "day_of_week": "2",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-17",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-10",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-02",
+  "day_of_week": "3",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-03",
+  "day_of_week": "4",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-14",
+  "day_of_week": "1",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-18",
+  "day_of_week": "5",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-15",
+  "day_of_week": "2",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-11",
+  "day_of_week": "5",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-07",
+  "day_of_week": "1",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-09",
+  "day_of_week": "3",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-04",
+  "day_of_week": "5",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ },
+ {
+  "menu_id": "cc389b96-11da-4f23-830f-4d09ff222ec7",
+  "menu_name": "MALICA 7",
+  "sort_order": 7,
+  "menu_date": "2026-09-16",
+  "day_of_week": "3",
+  "menu_description": "PIŠČANČJI BURGER (gorčično seme, jajca, ječmen, mleko, pšenica, soja), JABOLČNI SOK 0,2L , JOGURT (mleko, mlečni izdelek), SADJE",
+  "location_id": "7e548d45-4388-41d8-bbc8-ede0c8d5ffa3",
+  "location_name": "Lava 22"
+ }
+]

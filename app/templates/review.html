@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Ujemanja &middot; Prehrana Plus{% endblock %}
+{% block content %}
+<h1>Je to ista jed?</h1>
+<p class="sub">
+  Ti dve jedi sta si podobni, a nista enaki. Sam tega ne ugibam: če bi dve
+  različni jedi združil, bi se tvoja ocena tiho pokvarila.
+</p>
+
+{% if not questions %}
+<div class="card">
+  <p><strong>Nič za odgovoriti.</strong> Vse jedi so trenutno jasno ločene.</p>
+  <p class="muted">Tu se pojavi vprašanje, kadar nova jed izgleda skoraj enako kot že znana.</p>
+</div>
+{% endif %}
+
+{% for q in questions %}
+<div class="card" style="margin-bottom:1rem">
+  <p class="muted" style="font-size:.85rem;margin:0 0 .25rem">
+    {{ q.reason }} &middot; podobnost {{ '%.0f'|format(q.score * 100) }}%
+  </p>
+  <div class="pair">
+    <div class="side">
+      <span class="name">{{ q.a.name }}</span>
+      <span class="full">{{ q.a.description }}</span>
+      <p class="muted" style="font-size:.8rem;margin:.5rem 0 0">
+        videno {{ q.a.times_seen }}&times;{% if q.a.first_seen %}, prvič {{ q.a.first_seen }}{% endif %}
+      </p>
+    </div>
+    <div class="side">
+      <span class="name">{{ q.b.name }}</span>
+      <span class="full">{{ q.b.description }}</span>
+      <p class="muted" style="font-size:.8rem;margin:.5rem 0 0">
+        videno {{ q.b.times_seen }}&times;{% if q.b.first_seen %}, prvič {{ q.b.first_seen }}{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="actions">
+    <form method="post" action="/review/answer" class="inline">
+      <input type="hidden" name="question_id" value="{{ q.id }}">
+      <input type="hidden" name="verdict" value="same">
+      <button class="btn" type="submit">Ista jed &mdash; združi</button>
+    </form>
+    <form method="post" action="/review/answer" class="inline">
+      <input type="hidden" name="question_id" value="{{ q.id }}">
+      <input type="hidden" name="verdict" value="different">
+      <button class="btn ghost" type="submit">Različni jedi &mdash; pusti ločeno</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Končano &middot; Prehrana Plus{% endblock %}
+{% block content %}
+<h1>Vse ocenjeno</h1>
+<p class="sub">
+  {{ total }} jedi je urejenih od najljubše navzdol{% if progress.excluded %},
+  {{ progress.excluded }} pa si jih zavrnil{% endif %}.
+</p>
+<div class="card">
+  <p>
+    Vrstni red lahko kadarkoli popraviš &mdash; na strani <strong>Jedi</strong>
+    povleci katerokoli jed gor ali dol. Ko se pojavijo nove jedi, te vprašam
+    samo zanje.
+  </p>
+  <div class="actions">
+    <a class="btn" href="/meals">Poglej in uredi vrstni red</a>
+    <a class="btn ghost" href="/week">Kaj bo ta teden</a>
+    <a class="btn ghost" href="/tutorial">Kako to deluje</a>
+    <form method="post" action="/rank/restart" class="inline"
+          onsubmit="return confirm('To zbriše vse ocene in začne znova. Zavrnjene jedi ostanejo zavrnjene. Nadaljujem?')">
+      <button class="btn ghost" type="submit">Oceni vse znova</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

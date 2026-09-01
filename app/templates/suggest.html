@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Predlogi &middot; Prehrana Plus{% endblock %}
+{% block content %}
+<h1>Imaš predlog?</h1>
+<p class="sub">
+  Kaj manjka, kaj je nerodno, kaj bi moralo delati drugače. Pride naravnost
+  tistemu, ki to vzdržuje.
+</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if sent is not none %}
+  {% if sent %}
+  <div class="notice"><strong>Poslano.</strong> Hvala &mdash; res pomaga.</div>
+  {% else %}
+  <div class="notice">
+    <strong>Shranjeno.</strong> Trenutno ga ni bilo mogoče poslati naprej,
+    ampak ni izgubljen &mdash; shranjen je in bo poslan kasneje.
+  </div>
+  {% endif %}
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/suggest">
+    <label for="body" class="muted" style="font-size:.85rem">Tvoj predlog</label>
+    <textarea id="body" name="body" rows="6" maxlength="{{ max_length }}"
+              placeholder="Npr.: rad bi videl, koliko me je malica stala ta mesec." required></textarea>
+    <button class="btn" type="submit" style="margin-top:.8rem">Pošlji predlog</button>
+  </form>
+  <p class="muted" style="font-size:.8rem;margin-bottom:0">
+    Poslano bo skupaj s tvojim uporabniškim imenom in razredom, da je mogoče
+    vprašati za pojasnilo. Ni anonimno.
+  </p>
+</div>
+
+{% if mine %}
+<h2>Kar si že poslal</h2>
+<ol class="ranked plain">
+  {% for s in mine %}
+  <li>
+    <span class="name" style="font-weight:400">{{ s.body }}</span>
+    <span class="meta">
+      {% if s.delivered %}<span class="tag ok">poslano</span>
+      {% else %}<span class="tag skip">v čakalni vrsti</span>{% endif %}
+    </span>
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% endblock %}

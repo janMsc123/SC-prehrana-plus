@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Teden &middot; Prehrana Plus{% endblock %}
+{% block content %}
+<h1>Kaj bo naročeno</h1>
+<p class="sub">
+  Za vsak dan, ki ga šola trenutno dovoli naročiti, izbrana najvišje uvrščena jed.
+  Ta stran samo prikazuje &mdash; nič ne naroči.
+</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+{% if decisions is not none and not decisions %}
+<div class="card"><p>Trenutno ni nobenega dneva, ki bi ga bilo mogoče naročiti.</p></div>
+{% endif %}
+
+{% for d in decisions or [] %}
+<div class="day">
+  <header>
+    <span class="date">{{ d.order_date }}</span>
+    {% if d.choice %}
+      <span class="chosen">{{ d.choice.slot_name }} &middot; {{ d.choice.name }}</span>
+    {% endif %}
+    {% if d.status == 'to_order' %}<span class="tag ok">bo naročeno</span>
+    {% elif d.status == 'already_correct' %}<span class="tag ok">že naročeno</span>
+    {% else %}<span class="tag skip">{{ d.status }}</span>{% endif %}
+  </header>
+
+  {% if d.detail %}<p class="muted" style="margin:.15rem 0 0;font-size:.85rem">{{ d.detail }}</p>{% endif %}
+
+  {% if d.unranked %}
+  <p class="warn" style="font-size:.85rem;margin:.4rem 0 0">
+    Nerazvrščeno, zato ni bilo upoštevano: {{ d.unranked|join(', ') }}
+    &mdash; <a href="/rank">razvrsti</a>
+  </p>
+  {% endif %}
+
+  <ul class="options">
+    {% for option in d.considered %}
+    <li class="{% if d.choice and option.slot_menu_id == d.choice.slot_menu_id %}win{% endif %}{% if option.excluded %} out{% endif %}">
+      {{ option.slot_name }} &mdash; {{ option.name }}
+      {% if option.excluded %}<span class="tag skip">nikoli</span>
+      {% elif option.position is none %}<span class="tag skip">ni razvrščena</span>
+      {% else %}<span class="muted">#{{ option.position + 1 }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% endblock %}
