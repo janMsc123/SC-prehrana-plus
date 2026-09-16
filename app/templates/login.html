@@ -3,7 +3,7 @@
 {% block content %}
 <div class="login card">
   <h1>Prehrana Plus</h1>
-  <p class="sub">Prijavi se s šolskim računom za MALCOMAT.</p>
+  <p class="sub">Prijava s šolskim računom.</p>
 
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
@@ -16,15 +16,14 @@
 
     <label class="check">
       <input type="checkbox" name="remember" value="on" checked>
-      Shrani geslo, da lahko tedensko naročanje teče samo
+      Shrani geslo, da naročanje teče samo
     </label>
 
     <button class="btn" type="submit">Vpiši se</button>
   </form>
 
   <p class="muted" style="font-size:.8rem;margin-top:1.2rem">
-    Geslo gre naravnost šolskemu sistemu v preverbo. Shranjeno je šifrirano in
-    samo zato, da se lahko tedensko opravilo prijavi namesto tebe.
+    Geslo preveri šola. Shranjeno je šifrirano.
   </p>
 </div>
 {% endblock %}

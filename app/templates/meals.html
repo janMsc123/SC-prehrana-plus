@@ -2,31 +2,21 @@
 {% block title %}Jedi &middot; Prehrana Plus{% endblock %}
 {% block content %}
 <h1>Tvoj vrstni red</h1>
-<p class="sub">
-  Od najljubše navzdol. Po tem se odloča tedensko naročanje &mdash;
-  povleci jed gor ali dol, če ti kaj ne ustreza.
-</p>
+<p class="sub">Od najljubše navzdol. Povleci, da premakneš.</p>
 
 {% if new_count %}
 <div class="notice">
-  <strong>{{ new_count }}</strong> {{ 'nova jed se je' if new_count == 1 else 'novih jedi se je' }}
-  pojavila na jedilniku in {{ 'je uvrščena' if new_count == 1 else 'so uvrščene' }} po oceni.
-  Poišči oznako <span class="tag new">NOVO</span> in {{ 'jo' if new_count == 1 else 'jih' }}
-  po potrebi premakni.
+  <strong>{{ new_count }}</strong> {{ 'nova jed' if new_count == 1 else 'novih jedi' }}
+  na seznamu &mdash; oznaka <span class="tag new">NOVO</span>.
   <form method="post" action="/meals/acknowledge" class="inline">
-    <button class="link" type="submit" style="color:var(--brand);font-weight:600">
-      V redu, skrij oznake
-    </button>
+    <button class="link" type="submit">skrij</button>
   </form>
 </div>
 {% endif %}
 
 {% if ranked %}
-<div class="legend">
-  <span><span class="swatch close"></span> ocena se razlikuje za {{ tie_window }} ali manj &mdash; vrstni red med njima je poljuben</span>
-  <a href="/tutorial" class="muted">kako to deluje?</a>
-</div>
-
+{# One list, one form. The × uses formaction so excluding a meal does not need
+   a nested form -- which would be invalid inside the reorder form. #}
 <form method="post" action="/meals/order" id="orderForm">
   <input type="hidden" name="order" id="orderField">
   <ol class="ranked draggable" id="mealList">
@@ -39,37 +29,27 @@
       <span class="meta">
         {% if meal.score %}<span class="score">{{ meal.score }}</span>{% endif %}
         <span class="movers">
-          <button type="button" class="move" data-dir="-1" aria-label="Premakni gor">&#9650;</button>
-          <button type="button" class="move" data-dir="1" aria-label="Premakni dol">&#9660;</button>
+          <button type="button" class="move" data-dir="-1" aria-label="Gor">&#9650;</button>
+          <button type="button" class="move" data-dir="1" aria-label="Dol">&#9660;</button>
         </span>
+        <button class="excl" type="submit" formaction="/meals/exclude"
+                name="meal_id" value="{{ meal.id }}"
+                title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
       </span>
     </li>
     {% endfor %}
   </ol>
   <div class="save-bar" id="saveBar" hidden>
-    <span>Vrstni red je spremenjen.</span>
-    <button class="btn" type="submit">Shrani vrstni red</button>
+    <span>Spremenjeno.</span>
+    <button class="btn" type="submit">Shrani</button>
     <a class="btn ghost" href="/meals">Prekliči</a>
   </div>
 </form>
 
-<h2>Odstrani jed</h2>
-<p class="muted" style="font-size:.9rem;margin-top:-.4rem">
-  Z &times; jed pade pod MALICA 7 in ne bo nikoli naročena.
+<p class="legend">
+  <span><strong>&times;</strong> = raje meni 7 kot to</span>
+  <span><span class="swatch close"></span> razlika {{ tie_window }} ali manj &mdash; vrstni red je poljuben</span>
 </p>
-<ol class="ranked plain">
-  {% for meal in ranked %}
-  <li>
-    <span class="name" style="font-weight:400">{{ meal.name }}</span>
-    <span class="meta">
-      <form method="post" action="/meals/exclude" class="inline">
-        <input type="hidden" name="meal_id" value="{{ meal.id }}">
-        <button class="link" type="submit" title="Nikoli tega">&times; nikoli</button>
-      </form>
-    </span>
-  </li>
-  {% endfor %}
-</ol>
 {% else %}
 <div class="card">
   <p>Še nič ni ocenjeno.</p>
@@ -78,28 +58,32 @@
 {% endif %}
 
 {% if others %}
-<h2>Še neocenjene in zavrnjene</h2>
-<ol class="ranked plain">
-  {% for meal in others %}
-  <li>
-    <span class="name" {% if meal.excluded %}style="text-decoration:line-through;opacity:.6"{% endif %}>
-      {{ meal.name }}
-    </span>
-    <span class="meta">
-      {% if meal.excluded %}
-        <span class="tag skip">nikoli</span>
-        <form method="post" action="/meals/unexclude" class="inline">
-          <input type="hidden" name="meal_id" value="{{ meal.id }}">
-          <button class="link" type="submit">vrni</button>
-        </form>
-      {% else %}
-        <span class="tag skip">ni ocenjena</span>
-      {% endif %}
-    </span>
-  </li>
-  {% endfor %}
-</ol>
-<p class="actions"><a class="btn ghost" href="/rank">Oceni manjkajoče</a></p>
+<details class="fold">
+  <summary>Neocenjene in zavrnjene ({{ others|length }})</summary>
+  <p class="muted" style="font-size:.82rem;margin:.2rem 0 .6rem">
+    Te se ne naročijo. Če so nekega dne na voljo samo take, dobiš meni 7.
+  </p>
+  <ol class="ranked plain">
+    {% for meal in others %}
+    <li>
+      <span class="name" {% if meal.excluded %}style="text-decoration:line-through;opacity:.6"{% endif %}>
+        {{ meal.name }}
+      </span>
+      <span class="meta">
+        {% if meal.excluded %}
+          <form method="post" action="/meals/unexclude" class="inline">
+            <input type="hidden" name="meal_id" value="{{ meal.id }}">
+            <button class="link" type="submit">vrni</button>
+          </form>
+        {% else %}
+          <span class="tag skip">ni ocenjena</span>
+        {% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="actions"><a class="btn ghost" href="/rank">Oceni manjkajoče</a></p>
+</details>
 {% endif %}
 
 <script>
@@ -139,10 +123,11 @@
     button.focus();
   });
 
-  // Pointer dragging: one code path for mouse, pen and touch.
+  // Pointer dragging: one code path for mouse, pen and touch. The two buttons
+  // living inside a row must not start a drag, or they can never be pressed.
   var dragging = null;
   list.addEventListener('pointerdown', function (event) {
-    if (event.target.closest('.move')) return;
+    if (event.target.closest('.move') || event.target.closest('.excl')) return;
     var li = event.target.closest('li');
     if (!li) return;
     dragging = li;
@@ -170,8 +155,12 @@
   list.addEventListener('pointerup', endDrag);
   list.addEventListener('pointercancel', endDrag);
 
-  // Make sure a submit always carries the current order.
-  form.addEventListener('submit', function () { field.value = ids().join(','); });
+  // A submit must always carry the current order -- except the × button, which
+  // posts to a different action and only needs its own meal_id.
+  form.addEventListener('submit', function (event) {
+    if (event.submitter && event.submitter.classList.contains('excl')) return;
+    field.value = ids().join(',');
+  });
 })();
 </script>
 {% endblock %}

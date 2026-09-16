@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Koledar &middot; Prehrana Plus{% endblock %}
+{% set dnevi = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'] %}
+{% block content %}
+<h1>Koledar</h1>
+<p class="sub">Klikni jed, da jo izbereš sam. Ostali dnevi ostanejo samodejni.</p>
+
+{% if archive_empty %}
+<div class="notice">
+  Arhiv jedilnika je še prazen &mdash; zbiralnik teče vsak dan ob 06:30.
+  Če hočeš koledar takoj, ga poženi ročno na
+  <a href="/">nadzorni plošči</a>.
+</div>
+{% elif not weeks %}
+<div class="card"><p>Za prihodnje dni v arhivu ni jedilnika.</p></div>
+{% else %}
+
+<div class="legend">
+  <span><span class="swatch pick"></span> tvoja izbira</span>
+  <span><span class="swatch auto"></span> samodejna</span>
+</div>
+
+{% for week in weeks %}
+<div class="cal-week">
+  {% for day in week %}
+  <div class="cal-day{% if day.override %} has-pick{% endif %}" id="d-{{ day.date }}">
+    <header>
+      <span class="dow">{{ dnevi[day.weekday] }}</span>
+      <span class="dnum">{{ day.date[8:10] }}. {{ day.date[5:7] }}.</span>
+      {% if day.override %}<span class="tag ok">ročno</span>{% endif %}
+    </header>
+
+    {% if day.override_stale %}
+    <p class="warn" style="font-size:.78rem;margin:.2rem 0 .4rem">
+      Prejšnja izbira ni več na jedilniku.
+    </p>
+    {% endif %}
+
+    <form method="post" action="/override/set">
+      <input type="hidden" name="order_date" value="{{ day.date }}">
+      {% for slot in day.slots %}
+      <button class="slot{% if slot.is_override %} picked{% elif slot.is_auto and not day.override %} auto{% endif %}"
+              type="submit" name="slot_menu_id" value="{{ slot.slot_menu_id }}"
+              title="{{ slot.description }}">
+        <span class="slot-name">{{ slot.name }}</span>
+        <span class="slot-meta">
+          {{ slot.slot_name }}
+          {%- if slot.excluded %} &middot; <span class="warn">nikoli</span>
+          {%- elif slot.position is none %} &middot; ni ocenjena
+          {%- else %} &middot; #{{ slot.position + 1 }}{% endif %}
+        </span>
+      </button>
+      {% endfor %}
+
+      {% if day.override %}
+      <button class="clear-pick" type="submit" formaction="/override/clear">
+        nazaj na samodejno
+      </button>
+      {% endif %}
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

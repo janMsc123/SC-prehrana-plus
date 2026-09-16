@@ -10,3 +10,7 @@ python-multipart==0.0.20
 # system tzdata package, so without this the cron schedule cannot resolve
 # Europe/Ljubljana and the scheduler fails to start.
 tzdata==2024.2
+
+# Test suite (README says "Run the tests with pytest"; not needed at runtime
+# but required for `docker compose exec ... pytest` to work at all).
+pytest==8.3.4

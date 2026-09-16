@@ -3,17 +3,13 @@
 {% block content %}
 <h1>Ti je to všeč?</h1>
 <p class="sub">
-  Če ne, pritisni <strong>&times;</strong> &mdash; ta jed pade pod MALICA 7 in
-  te zanjo ne vprašam več. Če ja, povleci drsnik.
+  Drsnik pove, kako zelo. <strong>&times;</strong> = raje meni 7 kot to.
 </p>
 
 {% set done = progress.rated + progress.excluded %}
 {% set total = progress.total + progress.excluded %}
 <div class="progress"><div style="width: {{ (100 * done / total) if total else 0 }}%"></div></div>
-<p class="progress-label">
-  Ocenjenih {{ progress.rated }} &middot; zavrnjenih {{ progress.excluded }} &middot;
-  ostane še {{ progress.to_rate }}
-</p>
+<p class="progress-label">ostane še {{ progress.to_rate }}</p>
 
 <div class="card rating-card">
   <p class="meal-name">{{ meal.name }}</p>
@@ -22,8 +18,6 @@
     {% for extra in meal.extras %}<li>{{ extra }}</li>{% endfor %}
   </ul>
   {% endif %}
-  <p class="muted" style="font-size:.8rem">videno {{ meal.times_seen }}&times;</p>
-
   <form method="post" action="/rank/rate" class="rate-form">
     <input type="hidden" name="meal_id" value="{{ meal.id }}">
     <div class="slider-row">
@@ -33,7 +27,7 @@
       <span class="slider-end">100</span>
     </div>
     <output id="scoreOut" for="score">{{ default_score }}</output>
-    <button class="btn big" type="submit">&check; Shrani oceno</button>
+    <button class="btn big" type="submit">Shrani</button>
   </form>
 
   <form method="post" action="/rank/exclude" class="rate-form">

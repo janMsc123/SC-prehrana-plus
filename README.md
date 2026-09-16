@@ -30,8 +30,15 @@ yellow** rather than queried, because at that distance either order is fine. If
 one of them does matter, **drag it** — the list is reorderable, and a meal you
 move stays where you put it.
 
-**3. Pick.** Each Monday it looks at every day the school will accept an order
+**3. Pick.** Every morning it looks at every day the school will accept an order
 for, finds the highest-ranked dish on offer, and orders it.
+
+It runs daily rather than weekly because the cutoffs do not all fall on the
+same weekday — Monday's order closes on **Saturday**. Since the school is asked
+which dates are orderable *right now*, a daily run claims each date on the
+first morning it becomes available and cannot miss a cutoff. Ordering the same
+day twice is harmless: an order that is already correct is recognised and left
+alone.
 
 ## The part that is actually hard
 
@@ -161,7 +168,7 @@ The database starts empty, so the steps have to happen in this order:
 4. **Read the short explainer** it shows you afterwards, then check the order on
    the **Jedi** page and drag anything that is in the wrong place.
 
-After that it runs itself: it collects every morning and orders every Monday.
+After that it runs itself: it collects every morning and orders every morning.
 
 ### Configuration
 
@@ -173,7 +180,7 @@ All of it lives in `.env`:
 | `MALCOMAT_BASE_URL` | `https://prehrana.sc-celje.si` | Your school's system. |
 | `PLACE_ORDERS` | `true` | `false` makes the picker compute and log its choices without ordering anything. |
 | `COLLECT_CRON_HOUR/MINUTE` | `6:30` | When the daily read runs. |
-| `PICK_CRON_DAY_OF_WEEK/HOUR/MINUTE` | `mon 7:00` | When the weekly order runs. |
+| `PICK_CRON_DAY_OF_WEEK/HOUR/MINUTE` | `* 7:00` | When the ordering run happens. `*` is daily — see above for why that matters. |
 | `TZ` | `Europe/Ljubljana` | Server timezone for the schedule. |
 | `SUGGESTIONS_WEBHOOK_URL` | *(empty)* | Chat webhook suggestions are forwarded to. **A credential — see below.** Empty means they are stored locally only. |
 

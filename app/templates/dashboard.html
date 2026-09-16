@@ -2,23 +2,13 @@
 {% block title %}Prehrana Plus{% endblock %}
 {% block content %}
 <h1>Živjo, {{ user.first_name or user.username }}</h1>
-<p class="sub">
-  {% if user.class_name %}{{ user.class_name }} &middot; {% endif %}
-  Zbrano iz šolskega jedilnika, razvrščeno po tvojem okusu.
-</p>
 
 <form method="post" action="/settings/autopilot">
   <input type="hidden" name="enabled" value="{{ 'off' if user.autopilot else 'on' }}">
   <div class="card switch-card {{ 'on' if user.autopilot else 'off' }}">
     <div class="switch-text">
-      <b>Samodejno naročanje {{ 'je vklopljeno' if user.autopilot else 'je izklopljeno' }}</b>
-      <span>
-        {% if user.autopilot %}
-          Vsak teden ti sam naroči najbolje uvrščeno jed za vsak dan.
-        {% else %}
-          Nič se ne naroči. Jedilnik se še vedno bere in ocene ostanejo.
-        {% endif %}
-      </span>
+      <b>Samodejno naročanje</b>
+      <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno — nič se ne naroči.' }}</span>
     </div>
     <button class="switch {{ 'on' if user.autopilot else '' }}" type="submit"
             role="switch" aria-checked="{{ 'true' if user.autopilot else 'false' }}"
@@ -27,93 +17,85 @@
 </form>
 
 <div class="stats">
-  <div class="stat"><b>{{ day_count }}</b><span>zbranih dni</span></div>
-  <div class="stat"><b>{{ meal_count }}</b><span>različnih jedi</span></div>
   <div class="stat"><b>{{ ranked_count }}</b><span>ocenjenih</span></div>
-  <div class="stat"><b>{{ unranked_count }}</b><span>še neocenjenih</span></div>
-  <div class="stat"><b>{{ excluded_count }}</b><span>zavrnjenih</span></div>
-  {% if progress.new %}<div class="stat"><b>{{ progress.new }}</b><span>novih jedi</span></div>{% endif %}
+  <div class="stat"><b>{{ unranked_count }}</b><span>za oceniti</span></div>
+  <div class="stat"><b>{{ day_count }}</b><span>zbranih dni</span></div>
+  {% if progress.new %}<div class="stat"><b>{{ progress.new }}</b><span>novih</span></div>{% endif %}
 </div>
 
-<div class="card" style="margin-top:1.25rem">
-  {% if unranked_count %}
-    <p><strong>{{ unranked_count }}</strong> jedi še čaka na oceno &mdash;
-       ena poteza z drsnikom na jed.</p>
-    <a class="btn" href="/rank">{{ 'Nadaljuj' if in_progress else 'Začni' }} ocenjevanje</a>
+{# One card, one obvious next step -- whatever that is right now. #}
+<div class="card" style="margin-top:1rem">
+  {% if meal_count == 0 %}
+    <p>Jedilnika še nisem prebral.</p>
+    <form method="post" action="/run/collect" class="inline">
+      <button class="btn" type="submit">Zberi jedilnik</button>
+    </form>
+  {% elif unranked_count %}
+    <p><strong>{{ unranked_count }}</strong> jedi čaka na oceno.</p>
+    <a class="btn" href="/rank">{{ 'Nadaljuj' if in_progress else 'Začni' }}</a>
   {% elif progress.new %}
-    <p><strong>{{ progress.new }}</strong> novih jedi je uvrščenih po oceni. Preveri, če so na pravem mestu.</p>
-    <a class="btn" href="/meals">Poglej seznam</a>
-  {% elif ranked_count %}
-    <p>Vse znane jedi so ocenjene. Tedensko naročanje ve, kaj izbrati.</p>
-    <a class="btn" href="/week">Poglej ta teden</a>
-  {% elif meal_count == 0 %}
-    <p>
-      <strong>Začni tukaj.</strong> Jedilnika še nisem prebral, zato ni česa
-      ocenjevati. Klikni <em>Zberi jedilnik zdaj</em> &mdash; traja nekaj
-      sekund, nato lahko oceniš jedi.
-    </p>
+    <p><strong>{{ progress.new }}</strong> novih jedi je uvrščenih po oceni.</p>
+    <a class="btn" href="/meals">Preveri seznam</a>
   {% else %}
-    <p>Še ni podatkov. Poženi zbiranje, da preberem jedilnik.</p>
+    <p>Vse ocenjeno. Naročanje ve, kaj izbrati.</p>
+    <a class="btn" href="/week">Poglej ta teden</a>
   {% endif %}
 
   <div class="actions">
     <form method="post" action="/run/collect" class="inline">
-      <button class="btn ghost" type="submit">Zberi jedilnik zdaj</button>
+      <button class="btn ghost" type="submit">Zberi zdaj</button>
     </form>
     <form method="post" action="/run/pick" class="inline">
       <button class="btn ghost" type="submit">
-        {{ 'Naroči zdaj' if place_orders else 'Preračunaj izbire' }}
+        {{ 'Naroči zdaj' if place_orders else 'Preračunaj' }}
       </button>
     </form>
-    <a class="btn ghost" href="/suggest">Pošlji predlog</a>
   </div>
-</div>
-
-<div class="card" style="margin-top:1.25rem">
-  <p class="muted" style="font-size:.9rem;margin:0">
-    Tvoje šolsko geslo je shranjeno šifrirano, da se lahko tedensko opravilo
-    prijavi namesto tebe.
-  </p>
-  <form method="post" action="/settings/forget-password" class="inline"
-        onsubmit="return confirm('Geslo bo izbrisano in samodejno naročanje se izklopi. Nadaljujem?')">
-    <button class="link" type="submit" style="margin-top:.5rem">Pozabi moje geslo</button>
-  </form>
 </div>
 
 {% if picks %}
 <h2>Zadnje izbire</h2>
-<table>
-  <tr><th>Datum</th><th>Izbrano</th><th>Status</th></tr>
+<ol class="ranked plain">
   {% for pick in picks %}
-  <tr>
-    <td>{{ pick.order_date }}</td>
-    <td>{{ pick.slot_name or '&mdash;'|safe }}</td>
-    <td>
+  <li>
+    <span class="name">{{ pick.order_date }}</span>
+    <span class="muted">{{ pick.slot_name or '' }}</span>
+    <span class="meta">
       {% if pick.status == 'placed' %}<span class="tag ok">naročeno</span>
-      {% elif pick.status == 'dry_run' %}<span class="tag skip">samo izračun</span>
       {% elif pick.status == 'already_correct' %}<span class="tag ok">že naročeno</span>
+      {% elif pick.status == 'dry_run' %}<span class="tag skip">izračun</span>
       {% elif pick.status == 'failed' %}<span class="tag bad">napaka</span>
-      {% else %}<span class="tag skip">{{ pick.status }}</span>{% endif %}
-      <span class="muted">{{ pick.detail }}</span>
-    </td>
-  </tr>
+      {% else %}<span class="tag skip">preskočeno</span>{% endif %}
+    </span>
+  </li>
   {% endfor %}
-</table>
+</ol>
 {% endif %}
 
-{% if jobs %}
-<h2>Opravila</h2>
-<table>
-  <tr><th>Opravilo</th><th>Kdaj</th><th>Izid</th></tr>
-  {% for job in jobs %}
-  <tr>
-    <td>{{ job.job }}</td>
-    <td class="muted">{{ job.started_at }}</td>
-    <td>{% if job.ok == 1 %}<span class="tag ok">ok</span>
-        {% elif job.ok == 0 %}<span class="tag bad">napaka</span>
-        {% else %}<span class="tag skip">teče</span>{% endif %}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
+<details class="fold">
+  <summary>Opravila in račun</summary>
+
+  {% if jobs %}
+  <table>
+    <tr><th>Opravilo</th><th>Kdaj</th><th>Izid</th></tr>
+    {% for job in jobs %}
+    <tr>
+      <td>{{ job.job }}</td>
+      <td class="muted">{{ job.started_at }}</td>
+      <td>{% if job.ok == 1 %}<span class="tag ok">ok</span>
+          {% elif job.ok == 0 %}<span class="tag bad">napaka</span>
+          {% else %}<span class="tag skip">teče</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <p class="muted" style="font-size:.85rem">
+    Tvoje šolsko geslo je shranjeno šifrirano, da lahko naročanje teče brez tebe.
+  </p>
+  <form method="post" action="/settings/forget-password" class="inline"
+        onsubmit="return confirm('Geslo bo izbrisano in samodejno naročanje se izklopi. Nadaljujem?')">
+    <button class="link" type="submit">Pozabi moje geslo</button>
+  </form>
+</details>
 {% endblock %}

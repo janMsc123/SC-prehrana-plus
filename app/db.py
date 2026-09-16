@@ -134,6 +134,19 @@ CREATE TABLE IF NOT EXISTS rank_session (
     updated_at TEXT NOT NULL
 );
 
+-- A meal chosen by hand for one date, overriding the ranking. Keyed by date so
+-- there is at most one per user per day; `slot_menu_id` is what actually gets
+-- ordered, `meal_id` is kept only so the choice can still be named if the
+-- school's slot ids for that date change under us.
+CREATE TABLE IF NOT EXISTS override (
+    user_id      TEXT NOT NULL,
+    order_date   TEXT NOT NULL,
+    slot_menu_id TEXT NOT NULL,
+    meal_id      TEXT,
+    created_at   TEXT NOT NULL,
+    PRIMARY KEY (user_id, order_date)
+);
+
 -- What the picker decided, and what happened when it tried to order.
 CREATE TABLE IF NOT EXISTS pick (
     id           TEXT PRIMARY KEY,
@@ -172,6 +185,7 @@ CREATE INDEX IF NOT EXISTS idx_obs_date ON observation (menu_date);
 CREATE INDEX IF NOT EXISTS idx_obs_meal ON observation (meal_id);
 CREATE INDEX IF NOT EXISTS idx_question_status ON match_question (status);
 CREATE INDEX IF NOT EXISTS idx_ranking_user ON ranking (user_id, position);
+CREATE INDEX IF NOT EXISTS idx_override_user ON override (user_id, order_date);
 CREATE INDEX IF NOT EXISTS idx_rating_user ON rating (user_id, score DESC);
 """
 

@@ -45,6 +45,24 @@ class Settings:
 
         self.timezone = os.environ.get("TZ", "Europe/Ljubljana")
 
+        # The slot that is on offer every school day. It acts as the floor:
+        # never rated, and ordered on any day where nothing else clears it, so
+        # you are never left without lunch. Blank disables the whole idea.
+        self.fallback_slot_name = os.environ.get(
+            "FALLBACK_SLOT_NAME", "MALICA 7"
+        ).strip()
+
+        # Who may answer the "is this the same dish?" questions. Merging two
+        # meals rewrites the shared archive for everyone, so this is upkeep for
+        # whoever runs the instance -- not something each classmate should be
+        # shown. Unset means nobody sees it, which is the safe default: the
+        # questions simply wait rather than being answered by a guess.
+        self.admin_usernames = {
+            name.strip().lower()
+            for name in os.environ.get("ADMIN_USERNAMES", "").split(",")
+            if name.strip()
+        }
+
         # Chat webhook that suggestions are forwarded to. A credential: anyone
         # holding it can post to that channel, so it is read from the
         # environment and must never be committed. Unset simply means

@@ -2,15 +2,11 @@
 {% block title %}Ujemanja &middot; Prehrana Plus{% endblock %}
 {% block content %}
 <h1>Je to ista jed?</h1>
-<p class="sub">
-  Ti dve jedi sta si podobni, a nista enaki. Sam tega ne ugibam: če bi dve
-  različni jedi združil, bi se tvoja ocena tiho pokvarila.
-</p>
+<p class="sub">Podobni, a morda različni. Ugibati ne smem.</p>
 
 {% if not questions %}
 <div class="card">
-  <p><strong>Nič za odgovoriti.</strong> Vse jedi so trenutno jasno ločene.</p>
-  <p class="muted">Tu se pojavi vprašanje, kadar nova jed izgleda skoraj enako kot že znana.</p>
+  <p>Nič za odgovoriti.</p>
 </div>
 {% endif %}
 
@@ -39,12 +35,12 @@
     <form method="post" action="/review/answer" class="inline">
       <input type="hidden" name="question_id" value="{{ q.id }}">
       <input type="hidden" name="verdict" value="same">
-      <button class="btn" type="submit">Ista jed &mdash; združi</button>
+      <button class="btn" type="submit">Ista &mdash; združi</button>
     </form>
     <form method="post" action="/review/answer" class="inline">
       <input type="hidden" name="question_id" value="{{ q.id }}">
       <input type="hidden" name="verdict" value="different">
-      <button class="btn ghost" type="submit">Različni jedi &mdash; pusti ločeno</button>
+      <button class="btn ghost" type="submit">Različni</button>
     </form>
   </div>
 </div>

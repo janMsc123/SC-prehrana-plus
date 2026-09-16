@@ -26,7 +26,7 @@ import logging
 from collections import defaultdict
 from datetime import date, datetime
 
-from . import collector, db, identity, ranking
+from . import collector, db, fallback, identity, overrides, ranking
 from .config import settings
 from .malcomat import AuthError, Client, MalcomatError
 
@@ -81,6 +81,7 @@ def plan(user_row, client, today=None):
             "SELECT meal_id FROM exclusion WHERE user_id = ?", (user_row["id"],)
         )
     }
+    chosen_by_hand = overrides.for_dates(user_row["id"], dates)
     known = collector._parsed_known_meals()
 
     decisions = []
@@ -95,6 +96,8 @@ def plan(user_row, client, today=None):
             "detail": "",
             "unranked": [],
             "considered": [],
+            "overridden": False,
+            "is_fallback": False,
         }
 
         if not slots:
@@ -103,28 +106,60 @@ def plan(user_row, client, today=None):
             decisions.append(decision)
             continue
 
-        best = None
         for slot in slots:
             meal_id, _verdict, _queued = collector.resolve_meal(
                 slot["menu_description"], order_date, known
             )
-            entry = {
+            decision["considered"].append({
                 "meal_id": meal_id,
                 "slot_menu_id": slot["menu_id"],
                 "slot_name": slot.get("menu_name") or "",
                 "name": identity.display_name(identity.parse(slot["menu_description"])),
                 "position": positions.get(meal_id),
                 "excluded": meal_id in excluded,
-            }
-            decision["considered"].append(entry)
+            })
 
-            if entry["excluded"]:
-                continue
-            if entry["position"] is None:
-                decision["unranked"].append(entry["name"])
-                continue
-            if best is None or entry["position"] < best["position"]:
-                best = entry
+        # A meal picked by hand for this date beats everything else: the
+        # ranking, an exclusion, and a dish that was never rated. Choosing it
+        # on the calendar is a more specific instruction than any of those.
+        override_row = chosen_by_hand.get(order_date)
+        best = None
+        if override_row is not None:
+            best = next(
+                (e for e in decision["considered"]
+                 if e["slot_menu_id"] == override_row["slot_menu_id"]),
+                None,
+            )
+            if best is not None:
+                decision["overridden"] = True
+            else:
+                # The slot is gone -- the school changed the offer after the
+                # choice was made. Say so rather than silently auto-picking.
+                decision["detail"] = "ročna izbira ni več na jedilniku"
+
+        if best is None:
+            for entry in decision["considered"]:
+                if entry["excluded"]:
+                    continue
+                if entry["position"] is None:
+                    decision["unranked"].append(entry["name"])
+                    continue
+                if best is None or entry["position"] < best["position"]:
+                    best = entry
+
+        if best is None:
+            # Nothing cleared the floor -- so take the floor. The fallback is
+            # on offer every day and is never rated or excluded in its own
+            # right, which is the whole point: you still get lunch.
+            fallback_slot = fallback.find_in_menu(slots)
+            if fallback_slot is not None:
+                best = next(
+                    (e for e in decision["considered"]
+                     if e["slot_menu_id"] == fallback_slot["menu_id"]),
+                    None,
+                )
+                if best is not None:
+                    decision["is_fallback"] = True
 
         if best is None:
             decision["status"] = "skipped"
@@ -137,6 +172,7 @@ def plan(user_row, client, today=None):
             continue
 
         decision["choice"] = best
+        stale_note = decision["detail"]  # set above if an override went missing
         already = existing_orders.get(order_date)
         if already and already.get("menu_id") == best["slot_menu_id"]:
             decision["status"] = "already_correct"
@@ -147,6 +183,19 @@ def plan(user_row, client, today=None):
         else:
             decision["status"] = "to_order"
             decision["detail"] = "replacing {}".format(already["menu_name"]) if already else ""
+
+        if decision["overridden"]:
+            decision["detail"] = " · ".join(
+                p for p in ("ročna izbira", decision["detail"]) if p
+            )
+        elif decision["is_fallback"]:
+            decision["detail"] = " · ".join(
+                p for p in ("rezerva", decision["detail"]) if p
+            )
+        elif stale_note:
+            decision["detail"] = " · ".join(
+                p for p in (stale_note, decision["detail"]) if p
+            )
         decisions.append(decision)
 
     return decisions

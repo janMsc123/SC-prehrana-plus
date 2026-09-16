@@ -243,15 +243,25 @@ def close_to_neighbour(order, scores, window=TIE_WINDOW):
 
 
 def unrated_meals(user_id):
-    """Meals with no score and no X yet, most-seen first."""
+    """Meals with no score and no X yet, most-seen first.
+
+    The daily fallback is left out: it is the floor every other dish is judged
+    against, not one of the choices, so asking for a score on it means nothing.
+    """
+    from . import fallback
+
     excluded = excluded_meals(user_id)
     rated = set(get_ratings(user_id))
+    floor = fallback.meal_ids()
     rows = db.query(
         """SELECT id FROM meal
             WHERE id NOT IN (SELECT meal_id FROM meal_alias)
             ORDER BY times_seen DESC, first_seen_date, id"""
     )
-    return [r["id"] for r in rows if r["id"] not in excluded and r["id"] not in rated]
+    return [
+        r["id"] for r in rows
+        if r["id"] not in excluded and r["id"] not in rated and r["id"] not in floor
+    ]
 
 
 def next_question(user_id):
@@ -283,9 +293,16 @@ def mark_onboarded(user_id):
 
 def progress(user_id):
     """Counts for the progress bar and the dashboard."""
+    from . import fallback
+
     excluded = excluded_meals(user_id)
-    total = len([m for m in db.load_meals() if m not in excluded])
-    rated = len(get_ratings(user_id))
+    # The fallback is never asked about, so counting it would leave the pass
+    # permanently one short of finished.
+    floor = fallback.meal_ids()
+    total = len([
+        m for m in db.load_meals() if m not in excluded and m not in floor
+    ])
+    rated = len([m for m in get_ratings(user_id) if m not in floor])
     return {
         "total": total,
         "rated": rated,

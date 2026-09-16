@@ -10,6 +10,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY tests ./tests
+COPY pytest.ini .
 
 # Create the user and prepare /data BEFORE declaring the volume. Anything a
 # later layer writes into a VOLUME path is discarded, so a chown after the

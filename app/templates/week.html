@@ -1,49 +1,59 @@
 {% extends "base.html" %}
 {% block title %}Teden &middot; Prehrana Plus{% endblock %}
+{% set dnevi = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'] %}
 {% block content %}
 <h1>Kaj bo naročeno</h1>
-<p class="sub">
-  Za vsak dan, ki ga šola trenutno dovoli naročiti, izbrana najvišje uvrščena jed.
-  Ta stran samo prikazuje &mdash; nič ne naroči.
-</p>
+<p class="sub">Samo pregled &mdash; ta stran nič ne naroči.</p>
 
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
 {% if decisions is not none and not decisions %}
-<div class="card"><p>Trenutno ni nobenega dneva, ki bi ga bilo mogoče naročiti.</p></div>
+<div class="card"><p>Ni dnevov za naročilo.</p></div>
 {% endif %}
 
+{# One line per day. Everything the picker weighed is real but secondary, so
+   it folds away instead of filling the screen. #}
 {% for d in decisions or [] %}
 <div class="day">
   <header>
-    <span class="date">{{ d.order_date }}</span>
-    {% if d.choice %}
-      <span class="chosen">{{ d.choice.slot_name }} &middot; {{ d.choice.name }}</span>
-    {% endif %}
-    {% if d.status == 'to_order' %}<span class="tag ok">bo naročeno</span>
+    <span class="date">
+      {%- if d.weekday is not none %}{{ dnevi[d.weekday] }} {% endif -%}
+      {{ d.order_date[8:10] }}. {{ d.order_date[5:7] }}.
+    </span>
+    {% if d.overridden %}<span class="tag ok">ročno</span>
+    {% elif d.is_fallback %}<span class="tag skip">rezerva</span>
+    {% elif d.status == 'to_order' %}<span class="tag ok">naroči</span>
     {% elif d.status == 'already_correct' %}<span class="tag ok">že naročeno</span>
-    {% else %}<span class="tag skip">{{ d.status }}</span>{% endif %}
+    {% else %}<span class="tag skip">preskočeno</span>{% endif %}
   </header>
 
-  {% if d.detail %}<p class="muted" style="margin:.15rem 0 0;font-size:.85rem">{{ d.detail }}</p>{% endif %}
-
-  {% if d.unranked %}
-  <p class="warn" style="font-size:.85rem;margin:.4rem 0 0">
-    Nerazvrščeno, zato ni bilo upoštevano: {{ d.unranked|join(', ') }}
-    &mdash; <a href="/rank">razvrsti</a>
+  {% if d.choice %}
+  <p class="chosen">{{ d.choice.name }}</p>
+  <p class="muted" style="font-size:.78rem;margin:.1rem 0 0">{{ d.choice.slot_name }}</p>
+  {% else %}
+  <p class="muted" style="font-size:.85rem;margin:0">
+    {%- if d.unranked %}nič ocenjenega{% else %}{{ d.detail or 'ni izbire' }}{% endif -%}
   </p>
   {% endif %}
 
-  <ul class="options">
-    {% for option in d.considered %}
-    <li class="{% if d.choice and option.slot_menu_id == d.choice.slot_menu_id %}win{% endif %}{% if option.excluded %} out{% endif %}">
-      {{ option.slot_name }} &mdash; {{ option.name }}
-      {% if option.excluded %}<span class="tag skip">nikoli</span>
-      {% elif option.position is none %}<span class="tag skip">ni razvrščena</span>
-      {% else %}<span class="muted">#{{ option.position + 1 }}</span>{% endif %}
-    </li>
-    {% endfor %}
-  </ul>
+  {% if d.considered %}
+  <details class="fold">
+    <summary>možnosti ({{ d.considered|length }})</summary>
+    <ul class="options">
+      {% for option in d.considered %}
+      <li class="{% if d.choice and option.slot_menu_id == d.choice.slot_menu_id %}win{% endif %}{% if option.excluded %} out{% endif %}">
+        {{ option.name }}
+        {%- if option.excluded %} <span class="tag skip">nikoli</span>
+        {%- elif option.position is none %} <span class="tag skip">ni ocenjena</span>
+        {%- else %} <span class="muted">#{{ option.position + 1 }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if d.unranked %}
+    <p class="muted" style="font-size:.8rem"><a href="/rank">Oceni manjkajoče</a></p>
+    {% endif %}
+  </details>
+  {% endif %}
 </div>
 {% endfor %}
 {% endblock %}

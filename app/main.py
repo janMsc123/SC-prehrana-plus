@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -13,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, collector, db, picker, ranking, suggestions
+from . import auth, collector, db, overrides, picker, ranking, suggestions
 from .config import settings
 from .malcomat import AuthError, Client, MalcomatError
 
@@ -120,8 +121,31 @@ def pending_question_count():
     return row["n"] if row else 0
 
 
+def is_admin(user):
+    """Whether this account maintains the shared meal archive.
+
+    Answering an identity question merges two meals for *everyone*, so it is
+    upkeep for whoever runs the instance rather than a per-user setting.
+    """
+    if user is None or not settings.admin_usernames:
+        return False
+    return (user["username"] or "").lower() in settings.admin_usernames
+
+
+def require_admin(request: Request):
+    user = require_user(request)
+    if not is_admin(user):
+        raise HTTPException(status_code=303, headers={"Location": "/"})
+    return user
+
+
 def render(request, name, user, **context):
-    context.setdefault("pending_questions", pending_question_count())
+    context.setdefault("is_admin", is_admin(user))
+    # Non-admins are never told about pending questions: they cannot act on
+    # them, so the badge would only be noise.
+    context.setdefault(
+        "pending_questions", pending_question_count() if is_admin(user) else 0
+    )
     context.setdefault("place_orders", settings.place_orders)
     context.setdefault("tie_window", ranking.TIE_WINDOW)
     context.setdefault("hide_nav", False)
@@ -344,7 +368,7 @@ def meals_unexclude(
 
 
 @app.get("/review", response_class=HTMLResponse)
-def review_page(request: Request, user=Depends(require_user)):
+def review_page(request: Request, user=Depends(require_admin)):
     rows = db.query(
         "SELECT * FROM match_question WHERE status = 'pending' ORDER BY score DESC"
     )
@@ -370,7 +394,7 @@ def review_answer(
     request: Request,
     question_id: str = Form(...),
     verdict: str = Form(...),
-    user=Depends(require_user),
+    user=Depends(require_admin),
 ):
     collector.answer_question(question_id, same=(verdict == "same"))
     return RedirectResponse("/review", status_code=303)
@@ -396,7 +420,54 @@ def week_page(request: Request, user=Depends(require_user)):
     for decision in decisions:
         for entry in decision["considered"]:
             entry["view"] = meal_view(entry["meal_id"])
+        # Weekday for the short "pon 7. 9." label; the raw ISO date is not
+        # something anyone reads at a glance.
+        try:
+            decision["weekday"] = date.fromisoformat(decision["order_date"]).weekday()
+        except (TypeError, ValueError):
+            decision["weekday"] = None
     return render(request, "week.html", user, decisions=decisions, error=None)
+
+
+# --- picking by hand -----------------------------------------------------
+
+
+@app.get("/override", response_class=HTMLResponse)
+def override_page(request: Request, user=Depends(require_user)):
+    """Calendar of upcoming days, with the meal for each one selectable.
+
+    Built from the local archive, so it neither logs into the school nor
+    orders anything -- it only records what the weekly job should do.
+    """
+    overrides.clear_past(user["id"])
+    days = overrides.days(user)
+    return render(
+        request, "override.html", user,
+        weeks=overrides.in_weeks(days),
+        day_count=len(days),
+        chosen_count=sum(1 for d in days if d["override"]),
+        archive_empty=not db.query_one("SELECT COUNT(*) AS n FROM observation")["n"],
+    )
+
+
+@app.post("/override/set")
+def override_set(
+    request: Request,
+    order_date: str = Form(...),
+    slot_menu_id: str = Form(...),
+    meal_id: str = Form(""),
+    user=Depends(require_user),
+):
+    overrides.set_override(user["id"], order_date, slot_menu_id, meal_id or None)
+    return RedirectResponse("/override#d-{}".format(order_date), status_code=303)
+
+
+@app.post("/override/clear")
+def override_clear(
+    request: Request, order_date: str = Form(...), user=Depends(require_user)
+):
+    overrides.clear(user["id"], order_date)
+    return RedirectResponse("/override#d-{}".format(order_date), status_code=303)
 
 
 # --- manual job triggers -------------------------------------------------
@@ -521,7 +592,9 @@ def startup():
     log.info(
         "started; collect daily %02d:%02d, pick %s %02d:%02d, place_orders=%s",
         settings.collect_hour, settings.collect_minute,
-        settings.pick_day_of_week, settings.pick_hour, settings.pick_minute,
+        "daily" if settings.pick_day_of_week.strip() == "*"
+        else settings.pick_day_of_week,
+        settings.pick_hour, settings.pick_minute,
         settings.place_orders,
     )
 
