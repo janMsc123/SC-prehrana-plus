@@ -14,20 +14,27 @@
 {% endif %}
 
 {# One form for the whole board. The three columns are read back out of the
-   page on submit, so a meal can be dragged from any of them into any other. #}
+   page on submit, so a meal can go from any of them into any other. #}
 <form method="post" action="/meals/save" id="boardForm">
   <input type="hidden" name="order" id="orderField">
   <input type="hidden" name="rejected" id="rejectedField">
   <input type="hidden" name="unrated" id="unratedField">
   <input type="hidden" name="scores" id="scoresField">
 
+  <div class="rank-toolbar">
+    <input type="search" id="searchBox" placeholder="Poišči jed" autocomplete="off"
+           aria-label="Poišči jed">
+    <span class="found" id="foundCount" hidden></span>
+  </div>
+
   <div class="rank-board">
     <div class="rank-col">
-      <ol class="ranked draggable dnd" id="rankedList" data-role="ranked">
+      <ol class="ranked dnd" id="rankedList" data-role="ranked">
         {% for meal in ranked %}
-        <li data-id="{{ meal.id }}"
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}"
             class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
-          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
           <span class="name">{{ meal.name }}</span>
           {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
           <span class="meta">
@@ -44,8 +51,9 @@
 
       <ol class="ranked plain dnd" id="rejectedList" data-role="rejected">
         {% for meal in rejected %}
-        <li data-id="{{ meal.id }}" class="is-out">
-          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}" class="is-out">
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
           <span class="name">{{ meal.name }}</span>
           <span class="meta">
             <input class="score" type="number" min="1" max="100" inputmode="numeric"
@@ -59,11 +67,15 @@
     </div>
 
     <div class="rank-col side">
-      <h2 class="col-head">Neocenjene <span class="count" id="unratedCount">{{ unrated|length }}</span></h2>
+      <h2 class="col-head">
+        Neocenjene <span class="count" id="unratedCount">{{ unrated|length }}</span>
+        {% if unrated %}<a class="col-link" href="/rank">oceni po vrsti</a>{% endif %}
+      </h2>
       <ol class="ranked plain dnd" id="unratedList" data-role="unrated">
         {% for meal in unrated %}
-        <li data-id="{{ meal.id }}">
-          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}">
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
           <span class="name">{{ meal.name }}</span>
           <span class="meta">
             <input class="score" type="number" min="1" max="100" inputmode="numeric"
@@ -76,6 +88,22 @@
       </ol>
       {% if not unrated %}<p class="empty-hint">Nič ne čaka na oceno.</p>{% endif %}
     </div>
+  </div>
+
+  <p class="hint" id="hint">
+    Tapni <strong>&#10287;</strong> in izberi, kam gre. Ali pa vpiši oceno,
+    jed se premakne sama.
+  </p>
+
+  {# Shown while a meal is lifted. It keeps the name in sight, so the whole
+     list can be scrolled or searched without losing track of what is held. #}
+  <div class="move-bar" id="moveBar" hidden>
+    <span class="holding">Premikaš <b id="heldName"></b></span>
+    <span class="move-actions">
+      <button type="button" class="btn ghost small" data-jump="top">Na vrh</button>
+      <button type="button" class="btn ghost small" data-jump="bottom">Na dno</button>
+      <button type="button" class="btn ghost small" id="cancelMove">Prekliči</button>
+    </span>
   </div>
 
   <div class="save-bar" id="saveBar" hidden>
@@ -100,21 +128,30 @@
     rejected: document.getElementById('rejectedField'),
     unrated: document.getElementById('unratedField')
   };
-  var bar = document.getElementById('saveBar');
+  var order = ['ranked', 'rejected', 'unrated'];
+  var saveBar = document.getElementById('saveBar');
+  var moveBar = document.getElementById('moveBar');
+  var heldName = document.getElementById('heldName');
+  var searchBox = document.getElementById('searchBox');
+  var foundCount = document.getElementById('foundCount');
   var counter = document.getElementById('unratedCount');
+  var hint = document.getElementById('hint');
 
-  function ids(list) {
-    return Array.prototype.map.call(list.children, function (li) {
-      return li.dataset.id;
+  function rows(list) {
+    return Array.prototype.filter.call(list.children, function (node) {
+      return node.dataset.id;
     });
   }
 
+  function ids(list) {
+    return rows(list).map(function (li) { return li.dataset.id; });
+  }
+
   function snapshot() {
-    var parts = [];
-    Object.keys(lists).forEach(function (key) {
-      parts.push(key + ':' + ids(lists[key]).join(','));
+    var parts = order.map(function (key) {
+      return key + ':' + ids(lists[key]).join(',');
     });
-    Array.prototype.forEach.call(lists.ranked.children, function (li) {
+    rows(lists.ranked).forEach(function (li) {
       parts.push(li.dataset.id + '=' + li.querySelector('.score').value);
     });
     return parts.join('|');
@@ -125,16 +162,15 @@
   // --- scores ------------------------------------------------------------
 
   function scoreOf(li) {
-    if (!li) return null;
+    if (!li || !li.dataset.id) return null;
     var value = parseInt(li.querySelector('.score').value, 10);
     return isNaN(value) ? null : value;
   }
 
   function clamp(value) { return Math.max(1, Math.min(100, value)); }
 
-  // The score a meal gets for landing where it was dropped: halfway between
-  // the rated meals above and below it, which is what the server would work
-  // out too. Doing it here as well means the number appears straight away.
+  // The score a meal gets for landing where it was put: halfway between the
+  // rated meals above and below, which is what the server works out too.
   function derive(li) {
     var above = null, below = null, node;
     for (node = li.previousElementSibling; node; node = node.previousElementSibling) {
@@ -152,8 +188,8 @@
     return clamp(Math.floor((above + below) / 2));
   }
 
-  // A row carries its number only while it is in the ranking. Out of it, the
-  // number is meaningless, so it is cleared rather than left to mislead.
+  // A row carries a number only while it is in the ranking. Out of it the
+  // number means nothing, so it is cleared rather than left to mislead.
   function dress(li) {
     var input = li.querySelector('.score');
     var button = li.querySelector('.excl');
@@ -165,6 +201,7 @@
       button.dataset.to = 'rejected';
       button.innerHTML = '&times;';
       button.title = 'Nikoli te jedi';
+      button.classList.remove('back');
     } else {
       input.hidden = true;
       input.value = '';
@@ -177,20 +214,21 @@
   }
 
   function sync() {
-    Object.keys(lists).forEach(function (key) {
+    order.forEach(function (key) {
       fields[key].value = ids(lists[key]).join(',');
+      lists[key].classList.toggle('is-empty', rows(lists[key]).length === 0);
     });
     var scores = {};
-    Array.prototype.forEach.call(lists.ranked.children, function (li) {
+    rows(lists.ranked).forEach(function (li, index) {
+      // Written in rather than counted in CSS: a filtered-out row would make
+      // a CSS counter renumber, and the position shown has to be the real one.
+      li.querySelector('.pos').textContent = index + 1;
       var value = scoreOf(li);
       if (value !== null) scores[li.dataset.id] = value;
     });
     document.getElementById('scoresField').value = JSON.stringify(scores);
-    if (counter) counter.textContent = lists.unrated.children.length;
-    Object.keys(lists).forEach(function (key) {
-      lists[key].classList.toggle('is-empty', lists[key].children.length === 0);
-    });
-    bar.hidden = snapshot() === original;
+    if (counter) counter.textContent = rows(lists.unrated).length;
+    saveBar.hidden = held !== null || snapshot() === original;
   }
 
   function moveTo(li, role) {
@@ -199,15 +237,20 @@
     sync();
   }
 
-  form.addEventListener('click', function (event) {
-    var button = event.target.closest('.excl');
-    if (!button) return;
-    event.preventDefault();
-    moveTo(button.closest('li'), button.dataset.to);
-  });
-
   // Typing a number re-slots the row where that number belongs, so the list
-  // never shows an order its own figures contradict.
+  // never shows an order its own figures contradict. On a small screen this is
+  // also the quickest way to move a meal a long way.
+  function resort(li) {
+    var target = clamp(parseInt(li.querySelector('.score').value, 10));
+    var before = null;
+    var others = rows(lists.ranked).filter(function (other) { return other !== li; });
+    for (var i = 0; i < others.length; i++) {
+      var other = scoreOf(others[i]);
+      if (other !== null && other < target) { before = others[i]; break; }
+    }
+    lists.ranked.insertBefore(li, before);
+  }
+
   form.addEventListener('change', function (event) {
     var input = event.target.closest('.score');
     if (!input) return;
@@ -219,35 +262,147 @@
     sync();
   });
 
-  function resort(li) {
-    var target = clamp(parseInt(li.querySelector('.score').value, 10));
-    var rows = Array.prototype.filter.call(lists.ranked.children, function (other) {
-      return other !== li;
-    });
-    var before = null;
-    for (var i = 0; i < rows.length; i++) {
-      var other = scoreOf(rows[i]);
-      if (other !== null && other < target) { before = rows[i]; break; }
-    }
-    lists.ranked.insertBefore(li, before);
+  // --- lift and place ----------------------------------------------------
+  //
+  // How this list is meant to be used, and the only way that works on a phone:
+  // tap the handle to pick a meal up, then tap the gap it goes in. Nothing is
+  // held down, so the page still scrolls and the search box still works while
+  // a meal is in hand.
+
+  var held = null;
+
+  function gap(list, beforeId) {
+    var li = document.createElement('li');
+    li.className = 'drop-here';
+    li.dataset.list = list.dataset.role;
+    li.dataset.before = beforeId || '';
+    li.innerHTML = '<span>sem</span>';
+    return li;
   }
 
-  // --- dragging ----------------------------------------------------------
+  function openGaps() {
+    order.forEach(function (key) {
+      var list = lists[key];
+      rows(list).forEach(function (li) {
+        list.insertBefore(gap(list, li.dataset.id), li);
+      });
+      list.appendChild(gap(list, ''));
+    });
+  }
+
+  function closeGaps() {
+    Array.prototype.forEach.call(
+      form.querySelectorAll('.drop-here'),
+      function (node) { node.parentNode.removeChild(node); }
+    );
+  }
+
+  function startMove(li) {
+    if (held) endMove();
+    held = li;
+    li.classList.add('held');
+    heldName.textContent = li.querySelector('.name').textContent.trim();
+    moveBar.hidden = false;
+    hint.hidden = true;
+    openGaps();
+    applyFilter();
+    sync();
+  }
+
+  function endMove() {
+    if (!held) return;
+    held.classList.remove('held');
+    held = null;
+    moveBar.hidden = true;
+    hint.hidden = false;
+    closeGaps();
+    applyFilter();
+  }
+
+  function land(moved) {
+    endMove();
+    dress(moved);
+    sync();
+    moved.classList.add('landed');
+    setTimeout(function () { moved.classList.remove('landed'); }, 900);
+  }
+
+  function place(target) {
+    var list = lists[target.dataset.list];
+    var beforeId = target.dataset.before;
+    var reference = null;
+    if (beforeId) {
+      reference = rows(list).filter(function (li) {
+        return li.dataset.id === beforeId;
+      })[0] || null;
+    }
+    var moved = held;
+    list.insertBefore(moved, reference);
+    land(moved);
+  }
+
+  form.addEventListener('click', function (event) {
+    var target = event.target.closest('.drop-here');
+    if (target && held) { event.preventDefault(); place(target); return; }
+
+    var reject = event.target.closest('.excl');
+    if (reject) {
+      event.preventDefault();
+      if (held) endMove();
+      moveTo(reject.closest('li'), reject.dataset.to);
+      return;
+    }
+
+    // A handle pressed and released without travelling is a tap, and a tap
+    // lifts the meal. One control, both gestures.
+    var grip = event.target.closest('.grip');
+    if (grip) {
+      event.preventDefault();
+      var li = grip.closest('li');
+      if (held === li) endMove(); else startMove(li);
+    }
+  });
+
+  moveBar.addEventListener('click', function (event) {
+    var button = event.target.closest('button');
+    if (!button || !held) return;
+    event.preventDefault();
+    if (button.id === 'cancelMove') { endMove(); return; }
+    var moved = held;
+    if (button.dataset.jump === 'top') {
+      lists.ranked.insertBefore(moved, lists.ranked.firstChild);
+    } else {
+      lists.ranked.appendChild(moved);
+    }
+    land(moved);
+  });
+
+  // --- dragging, for a nudge with a mouse --------------------------------
   //
-  // One pointer path for mouse, pen and touch. The drag only begins after the
-  // pointer has actually travelled, so a click on the number box or the button
-  // inside a row still reaches them.
+  // Only the handle starts a drag, and only the handle opts out of touch
+  // scrolling. Everywhere else the list scrolls the way a list should, which
+  // is what made this unusable on a phone before.
 
-  var candidate = null, dragging = null, startX = 0, startY = 0;
-  var THRESHOLD = 5;
+  var candidate = null, dragging = null, startX = 0, startY = 0, lastY = 0;
+  var THRESHOLD = 6;
+  var scrolling = null;
 
-  document.addEventListener('pointerdown', function (event) {
+  function autoScrollStep() {
+    if (!dragging) { scrolling = null; return; }
+    var margin = 90;
+    var height = window.innerHeight;
+    if (lastY < margin) window.scrollBy(0, -Math.ceil((margin - lastY) / 5));
+    else if (lastY > height - margin) {
+      window.scrollBy(0, Math.ceil((lastY - (height - margin)) / 5));
+    }
+    scrolling = requestAnimationFrame(autoScrollStep);
+  }
+
+  form.addEventListener('pointerdown', function (event) {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
-    if (event.target.closest('.score')) return;
-    if (event.target.closest('button:not(.grip)')) return;
-    var li = event.target.closest('li[data-id]');
-    if (!li || !li.parentNode.classList.contains('dnd')) return;
-    candidate = li;
+    var grip = event.target.closest('.grip');
+    if (!grip) return;
+    candidate = grip.closest('li');
     startX = event.clientX;
     startY = event.clientY;
   });
@@ -256,20 +411,23 @@
     if (!dragging && candidate) {
       if (Math.abs(event.clientX - startX) < THRESHOLD &&
           Math.abs(event.clientY - startY) < THRESHOLD) return;
+      if (held) endMove();
       dragging = candidate;
       dragging.classList.add('dragging');
-      // Out of the way of elementFromPoint, and out of the way of the text
-      // selection a mouse drag would otherwise paint across the page.
+      // Out of the way of elementFromPoint, and of the selection a mouse drag
+      // would otherwise paint down the page.
       dragging.style.pointerEvents = 'none';
       document.body.classList.add('dragging-row');
+      scrolling = requestAnimationFrame(autoScrollStep);
     }
     if (!dragging) return;
     event.preventDefault();
+    lastY = event.clientY;
 
     var under = document.elementFromPoint(event.clientX, event.clientY);
     if (!under || !under.closest) return;
     var over = under.closest('li[data-id]');
-    if (over && over.parentNode.classList.contains('dnd')) {
+    if (over && over.parentNode.classList.contains('dnd') && !over.hidden) {
       var box = over.getBoundingClientRect();
       var below = event.clientY > box.top + box.height / 2;
       over.parentNode.insertBefore(dragging, below ? over.nextSibling : over);
@@ -282,6 +440,7 @@
   function endDrag() {
     candidate = null;
     if (!dragging) return;
+    if (scrolling) { cancelAnimationFrame(scrolling); scrolling = null; }
     dragging.classList.remove('dragging');
     dragging.style.pointerEvents = '';
     document.body.classList.remove('dragging-row');
@@ -293,24 +452,74 @@
   document.addEventListener('pointerup', endDrag);
   document.addEventListener('pointercancel', endDrag);
 
-  // Keyboard and any browser without pointer events: the grip moves a row one
-  // place with the arrow keys, so the list is never drag-only.
+  // Keyboard: the handle is a real button, so a focused row moves one place
+  // with the arrow keys and no pointer at all.
   form.addEventListener('keydown', function (event) {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
-    var li = event.target.closest('li[data-id]');
-    if (!li || !event.target.closest('.grip')) return;
+    var grip = event.target.closest('.grip');
+    if (!grip) return;
+    var li = grip.closest('li');
     event.preventDefault();
-    if (event.key === 'ArrowUp' && li.previousElementSibling) {
-      li.parentNode.insertBefore(li, li.previousElementSibling);
-    } else if (event.key === 'ArrowDown' && li.nextElementSibling) {
-      li.parentNode.insertBefore(li.nextElementSibling, li);
-    }
+    if (held) endMove();
+    var sibling = event.key === 'ArrowUp'
+      ? li.previousElementSibling : li.nextElementSibling;
+    if (!sibling || !sibling.dataset.id) return;
+    if (event.key === 'ArrowUp') li.parentNode.insertBefore(li, sibling);
+    else li.parentNode.insertBefore(sibling, li);
     dress(li);
     sync();
-    event.target.focus();
+    grip.focus();
   });
 
-  form.addEventListener('submit', sync);
+  // --- search ------------------------------------------------------------
+  //
+  // With a hundred dishes, finding one is most of the work. Lift a meal, search
+  // for where it belongs, tap the gap: a long move without a long drag.
+
+  function applyFilter() {
+    var query = (searchBox.value || '').trim().toLowerCase();
+    var shown = 0;
+    order.forEach(function (key) {
+      rows(lists[key]).forEach(function (li) {
+        var match = !query || li.dataset.name.indexOf(query) !== -1;
+        li.hidden = !match;
+        if (match) shown += 1;
+      });
+      // A gap beside a hidden row cannot be aimed at, so it hides with the row.
+      Array.prototype.forEach.call(
+        lists[key].querySelectorAll('.drop-here'),
+        function (node) {
+          var next = node.nextElementSibling;
+          node.hidden = !!query && !!next && next.hidden;
+        }
+      );
+    });
+    form.classList.toggle('filtered', !!query);
+    foundCount.hidden = !query;
+    foundCount.textContent = shown + (shown === 1 ? ' zadetek' : ' zadetkov');
+  }
+
+  // The nav is sticky too, and its height changes with the screen, so the
+  // search bar is told where to stop rather than guessing.
+  var nav = document.querySelector('nav');
+  function setNavOffset() {
+    document.documentElement.style.setProperty(
+      '--nav-h', (nav ? nav.offsetHeight : 0) + 'px');
+  }
+  setNavOffset();
+  window.addEventListener('resize', setNavOffset);
+
+  searchBox.addEventListener('input', applyFilter);
+  searchBox.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { searchBox.value = ''; applyFilter(); }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && held) endMove();
+  });
+
+  form.addEventListener('submit', function () { endMove(); sync(); });
+  applyFilter();
   sync();
 })();
 </script>

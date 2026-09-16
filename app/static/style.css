@@ -232,36 +232,46 @@ table td { padding: .5rem .6rem; border-top: 1px solid var(--line); }
 
 /* --- the ranked list --------------------------------------------------- */
 
-ol.ranked { list-style: none; counter-reset: rank; padding: 0; margin: 0; }
+ol.ranked { list-style: none; padding: 0; margin: 0; }
 ol.ranked li {
-  counter-increment: rank;
-  display: flex; align-items: center; gap: .7rem;
+  display: flex; align-items: center; gap: .55rem;
   background: var(--card); border: 1px solid var(--line);
-  border-radius: 12px; padding: .7rem .85rem; margin-bottom: .4rem;
+  border-radius: 12px; padding: .55rem .7rem; margin-bottom: .35rem;
   box-shadow: var(--shadow);
 }
-ol.ranked li::before {
-  content: counter(rank);
-  color: var(--muted); font-weight: 700; font-size: .85rem;
+/* `display` beats the hidden attribute, so the search filter needs saying
+ * twice. Same trap as the save bar below. */
+ol.ranked li[hidden] { display: none; }
+
+/* The position is written in by the page rather than counted in CSS: a row
+ * hidden by the search would make a counter renumber, and the number shown
+ * has to be the meal's real place. */
+ol.ranked .pos {
+  color: var(--muted); font-weight: 700; font-size: .82rem;
   min-width: 1.5rem; font-variant-numeric: tabular-nums; flex: none;
 }
-ol.ranked .name { font-weight: 600; font-size: .93rem; min-width: 0; }
+ol.ranked.plain .pos { display: none; }
+
+ol.ranked .name { font-weight: 600; font-size: .92rem; min-width: 0; }
 ol.ranked .meta {
-  display: flex; align-items: center; gap: .4rem;
+  display: flex; align-items: center; gap: .35rem;
   margin-left: auto; flex: none; color: var(--muted); font-size: .82rem;
 }
-ol.ranked .score {
-  background: var(--brand-soft); color: var(--brand);
-  border-radius: 999px; padding: .12rem .5rem;
-  font-size: .76rem; font-weight: 700; font-variant-numeric: tabular-nums;
-}
-
-ol.ranked.plain { counter-reset: none; }
-ol.ranked.plain li { counter-increment: none; }
-ol.ranked.plain li::before { content: none; min-width: 0; }
 
 ol.ranked li.close { background: var(--close-bg); border-color: var(--close-line); }
 ol.ranked li.is-new { border-color: var(--new-ink); }
+
+/* Just landed somewhere: a brief mark so the eye can find it again after the
+ * list has moved under it. */
+ol.ranked li.landed {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+/* Lifted, waiting to be put down. */
+ol.ranked li.held {
+  border-color: var(--brand); border-style: dashed;
+  background: var(--brand-soft); opacity: .7;
+}
 
 /* --- the league table --------------------------------------------------- */
 
@@ -273,6 +283,7 @@ ol.ranked li.is-new { border-color: var(--new-ink); }
   display: flex; align-items: center; gap: .4rem;
   font-size: .92rem; margin: 0 0 .6rem;
 }
+.col-head { flex-wrap: wrap; }
 .col-head .count {
   background: #f2f4f7; color: var(--muted);
   border-radius: 999px; padding: .05rem .45rem;
@@ -290,7 +301,9 @@ ol.ranked li.is-new { border-color: var(--new-ink); }
   content: ""; flex: 1; height: 1px; background: var(--line);
 }
 
-ol.dnd li { touch-action: none; }
+/* Only the handle opts out of touch scrolling. Putting `touch-action: none` on
+ * the whole row, as this once did, means a finger on the list can never scroll
+ * it, which on a phone leaves a hundred meals unreachable. */
 ol.dnd li.dragging {
   opacity: .75; box-shadow: var(--shadow-pop); border-color: var(--brand);
 }
@@ -305,17 +318,96 @@ ol.ranked li.is-out .name { text-decoration: line-through; opacity: .6; }
 
 body.dragging-row { user-select: none; cursor: grabbing; }
 
+/* Tap it to lift the meal, drag it to nudge one. A full-height target because
+ * on a phone it is the only thing on the row you aim at. */
 button.grip {
-  background: none; border: none; padding: 0; flex: none;
-  width: 1.4rem; color: #b6bdc9; font-size: 1.05rem; line-height: 1;
-  cursor: grab; user-select: none;
+  background: none; border: none; padding: 0 .25rem; flex: none;
+  min-width: var(--tap); height: var(--tap);
+  color: #b6bdc9; font-size: 1.15rem; line-height: 1;
+  cursor: grab; user-select: none; touch-action: none;
 }
-button.grip:hover { color: var(--muted); }
+button.grip:hover { color: var(--brand); }
 button.grip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+li.held button.grip { color: var(--brand); }
+
+/* --- picking a place --------------------------------------------------- */
+
+/* The gaps that open between rows while a meal is held. Thin enough not to
+ * double the length of the list, tall enough to hit with a thumb. */
+ol.ranked li.drop-here {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 1.75rem; margin: 0 1.25rem .35rem; padding: 0;
+  border: 1px dashed #97a9e8; border-radius: 6px;
+  background: #dfe6ff; cursor: pointer;
+  box-shadow: none;
+}
+ol.ranked li.drop-here[hidden] { display: none; }
+ol.ranked li.drop-here span {
+  color: var(--brand); font-size: .68rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; opacity: .8;
+}
+ol.ranked li.drop-here:hover {
+  background: var(--brand); border-color: var(--brand); border-style: solid;
+}
+ol.ranked li.drop-here:hover span { color: #fff; opacity: 1; }
+
+.move-bar {
+  position: sticky; bottom: .75rem; z-index: 10;
+  display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+  margin-top: 1rem;
+  background: var(--brand); color: #fff;
+  border: 1px solid var(--brand); border-radius: var(--radius);
+  padding: .7rem .9rem;
+  box-shadow: var(--shadow-pop);
+  font-size: .9rem;
+}
+.move-bar[hidden] { display: none; }
+.move-bar .holding { flex: 1 1 10rem; min-width: 0; }
+.move-bar .holding b {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.move-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+.btn.small {
+  min-height: 2.3rem; padding: .35rem .7rem; font-size: .84rem;
+  border-radius: 8px;
+}
+.move-bar .btn.ghost { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .5); }
+.move-bar .btn.ghost:hover { background: rgba(255, 255, 255, .22); border-color: #fff; }
+
+/* --- finding a meal ----------------------------------------------------- */
+
+.rank-toolbar {
+  position: sticky; top: var(--nav-h, 0px); z-index: 5;
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .6rem 0 .8rem;
+  background: var(--bg);
+}
+.rank-toolbar input[type=search] {
+  flex: 1 1 12rem; min-width: 0;
+  padding: .6rem .8rem;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink); font: inherit;
+  min-height: var(--tap);
+}
+.rank-toolbar input[type=search]:focus {
+  outline: none; border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.rank-toolbar .found { color: var(--muted); font-size: .82rem; }
+.rank-toolbar .found[hidden] { display: none; }
+
+/* Dragging while the list is filtered would move a row past neighbours that
+ * are not on screen, so the handle stops offering it. */
+.filtered button.grip { cursor: pointer; }
+
+.hint { color: var(--muted); font-size: .84rem; margin: .9rem 0 0; }
+.hint[hidden] { display: none; }
+
+.col-link { margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--brand); }
 
 /* The score is editable in place: the pill is the input. */
 input.score {
-  width: 3.3rem; padding: .18rem .3rem; text-align: center;
+  width: 3.4rem; min-height: 2.1rem; padding: .18rem .3rem; text-align: center;
   background: var(--brand-soft); color: var(--brand);
   border: 1px solid transparent; border-radius: 999px;
   font: inherit; font-size: .78rem; font-weight: 700;
@@ -631,6 +723,12 @@ button.clear-pick:hover { border-color: var(--bad); color: var(--bad); }
 .demo-row.close { background: var(--close-bg); border-color: var(--close-line); }
 .demo-row.is-new { border-color: var(--new-ink); }
 .demo-row.dragging { box-shadow: var(--shadow-pop); border-color: var(--brand); }
+.demo-gap {
+  border: 1px dashed #97a9e8; background: #dfe6ff; border-radius: 6px;
+  color: var(--brand); font-size: .68rem; font-weight: 700;
+  letter-spacing: .08em; text-align: center; padding: .25rem;
+  margin: 0 1.25rem .35rem;
+}
 .demo-grip, .demo-move { color: var(--muted); }
 .demo-score, .demo-move { margin-left: auto; color: var(--muted); font-size: .82rem; }
 

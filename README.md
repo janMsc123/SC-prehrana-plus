@@ -27,8 +27,8 @@ whole questionnaire; there are no head-to-head questions.
 
 Meals scored within a couple of points of a neighbour are **highlighted in
 yellow** rather than queried, because at that distance either order is fine. If
-one of them does matter, **drag it**. The list is reorderable, and a meal you
-move stays where you put it.
+one of them does matter, move it: the list is reorderable, and a meal you move
+stays where you put it.
 
 **3. Pick.** Every morning it looks at every day the school will accept an order
 for, finds the highest-ranked dish on offer, and orders it. A meal you picked
@@ -168,10 +168,17 @@ The database starts empty, so the steps have to happen in this order:
 3. **Rate the dishes.** One slider screen per dish, ✕ for anything you never
    want. On a first collection that is around 75 screens.
 4. **Read the short explainer** it shows you afterwards, then check the order
-   on the **Lestvica jedi** page and drag anything that is in the wrong place.
-   Anything still unrated sits in the right-hand column and is rated by
-   dragging it into the list, where it takes the score its new neighbours
-   imply.
+   on the **Lestvica jedi** page and fix anything in the wrong place.
+
+To move a meal there, tap its **⠿** handle: the meal is lifted, gaps open
+between every row, and tapping one puts it there. Nothing is held down while
+you do it, so the list still scrolls and the search box still works, which is
+what makes a long move possible on a phone: lift the meal, search for where it
+belongs, tap the gap. **Na vrh** and **Na dno** cover the extremes, typing a
+score moves a meal to wherever that score belongs, and on a desktop the same
+handle can simply be dragged. Anything still unrated sits in the right-hand
+column and is rated by putting it in the list, where it takes the score its
+new neighbours imply.
 
 Everything else happens on the dashboard: the big switch, a countdown to the
 next ordering run, and one card per menu slot for each upcoming day. Tapping a
