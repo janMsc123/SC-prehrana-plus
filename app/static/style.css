@@ -542,6 +542,52 @@ button.slot-card.picked .slot-title,
 button.slot-card.picked .slot-desc,
 button.slot-card.picked .slot-meta { color: #fff; }
 
+/* Saying no. A light red tile crossed corner to corner: the X is the whole
+ * card, not a glyph sitting in it, so it reads as a day struck off. */
+button.slot-card.skip {
+  position: relative;
+  background: rgba(217, 45, 32, .07);
+  border-color: rgba(217, 45, 32, .28);
+}
+button.slot-card.skip:hover { border-color: var(--bad); }
+/* The labels sit on the tile's own colour so the diagonal does not run
+ * through the lettering. */
+button.slot-card.skip .slot-title,
+button.slot-card.skip .slot-meta {
+  position: relative;
+  align-self: center;
+  border-radius: 6px;
+  padding: .05rem .45rem;
+  background: #fdf0ef;
+}
+button.slot-card.skip .slot-title { color: var(--bad); }
+button.slot-card.skip .slot-meta { color: var(--bad); opacity: .85; }
+/* The tile has nothing but two labels, so centre them in the space the
+ * neighbouring cards fill with a description. */
+button.slot-card.skip { justify-content: center; }
+
+.slot-x {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+/* preserveAspectRatio="none" stretches the lines to the corners whatever the
+ * tile's shape; non-scaling-stroke keeps them an even width while it does. */
+.slot-x line { stroke: rgba(217, 45, 32, .45); stroke-width: 2; }
+
+button.slot-card.skip.picked {
+  background: rgba(217, 45, 32, .16);
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px rgba(217, 45, 32, .22);
+}
+button.slot-card.skip.picked .slot-title,
+button.slot-card.skip.picked .slot-meta { color: var(--bad); opacity: 1; }
+button.slot-card.skip.picked .slot-x line { stroke: var(--bad); stroke-width: 3; }
+
+.day-tab.has-skip .dot { background: var(--bad); }
+.legend .swatch.skip {
+  background: rgba(217, 45, 32, .16); border: 1px solid var(--bad);
+}
+
 button.clear-pick {
   width: 100%; margin-top: .7rem; background: transparent; cursor: pointer;
   border: 1px dashed var(--line); border-radius: 10px; padding: .55rem;

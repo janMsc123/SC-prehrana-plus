@@ -7,7 +7,9 @@ picking a dish by hand on a date is a clearer statement of intent than a
 blanket rule made weeks earlier.
 
 Overrides are keyed by date, not by meal, so there is at most one per day and
-setting a new one replaces the old. They are stored against `slot_menu_id`
+setting a new one replaces the old. One of them, `SKIP`, names no meal at all:
+it means "order nothing on this date", which is the only way to come out below
+the daily fallback, since the fallback otherwise guarantees you lunch. They are stored against `slot_menu_id`
 because that is what the school's order call takes; the meal id rides along so
 the choice can still be named in the UI.
 
@@ -28,6 +30,17 @@ from . import db, ranking
 #: How far ahead the day board looks. The school publishes roughly three weeks,
 #: and the collector sweeps 28 days, so this matches what can actually be there.
 HORIZON_DAYS = 28
+
+#: Stored where a slot id would go, to mean "order nothing that day".
+#:
+#: Saying no is a choice like any other, so it is kept as an override rather
+#: than as a second table: one row per user per date either names a slot or
+#: says this. It can never collide with a real slot id, which is a uuid.
+SKIP = "__skip__"
+
+
+def is_skip(slot_menu_id):
+    return slot_menu_id == SKIP
 
 
 # --- storage -------------------------------------------------------------
@@ -169,6 +182,7 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
             slot["is_override"] = slot["slot_menu_id"] == override_slot
             slot["is_auto"] = auto is not None and slot["slot_menu_id"] == auto["slot_menu_id"]
 
+        skipped = is_skip(override_slot)
         out.append(
             {
                 "date": menu_date,
@@ -181,9 +195,13 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
                 "override": next(
                     (s for s in slots if s["is_override"]), None
                 ),
+                # Signed off this day: nothing is ordered, not even the floor.
+                "skipped": skipped,
                 # An override whose slot is no longer on the menu for that day:
-                # the school changed the offer after the choice was made.
+                # the school changed the offer after the choice was made. A
+                # skip never matches a slot and is not stale for that reason.
                 "override_stale": bool(override_slot)
+                and not skipped
                 and not any(s["is_override"] for s in slots),
             }
         )

@@ -65,13 +65,14 @@
 <div class="legend">
   <span><span class="swatch pick"></span> tvoja izbira</span>
   <span><span class="swatch auto"></span> samodejna</span>
+  <span><span class="swatch skip"></span> odjava</span>
   {% if chosen_count %}<span class="muted">{{ chosen_count }} izbranih ročno</span>{% endif %}
 </div>
 
 <section class="board" id="board">
   <div class="board-days" role="tablist" aria-label="Dnevi">
     {% for day in days %}
-    <button type="button" class="day-tab{% if day.override %} has-pick{% endif %}"
+    <button type="button" class="day-tab{% if day.override %} has-pick{% elif day.skipped %} has-skip{% endif %}"
             role="tab" aria-selected="false" data-date="{{ day.date }}">
       <span class="dow">{{ dnevi[day.weekday] }}</span>
       <span class="dnum">{{ day.date[8:10]|int }}.{{ day.date[5:7]|int }}.</span>
@@ -97,7 +98,7 @@
         <input type="hidden" name="order_date" value="{{ day.date }}">
         <div class="slot-grid">
           {% for slot in day.slots %}
-          <button class="slot-card{% if slot.is_override %} picked{% elif slot.is_auto and not day.override %} auto{% endif %}"
+          <button class="slot-card{% if slot.is_override %} picked{% elif slot.is_auto and not day.override and not day.skipped %} auto{% endif %}"
                   type="submit" name="slot_menu_id" value="{{ slot.slot_menu_id }}"
                   title="{{ slot.description }}">
             <span class="slot-title">{{ slot.slot_name }}</span>
@@ -110,9 +111,25 @@
             </span>
           </button>
           {% endfor %}
+
+          {# Saying no. The X spans the whole tile so it reads as a crossing
+             out rather than as one more thing on the menu. #}
+          <button class="slot-card skip{% if day.skipped %} picked{% endif %}"
+                  type="submit" name="slot_menu_id" value="{{ skip_value }}"
+                  title="Ta dan ne naroči ničesar">
+            <svg class="slot-x" viewBox="0 0 100 100" preserveAspectRatio="none"
+                 aria-hidden="true" focusable="false">
+              <line x1="0" y1="0" x2="100" y2="100" vector-effect="non-scaling-stroke"/>
+              <line x1="100" y1="0" x2="0" y2="100" vector-effect="non-scaling-stroke"/>
+            </svg>
+            {# Kept to two short labels: the X runs through the tile, so
+               anything longer would be read across a diagonal line. #}
+            <span class="slot-title">BREZ MALICE</span>
+            <span class="slot-meta">odjava</span>
+          </button>
         </div>
 
-        {% if day.override %}
+        {% if day.override or day.skipped %}
         <button class="clear-pick" type="submit" formaction="/override/clear">
           nazaj na samodejno
         </button>

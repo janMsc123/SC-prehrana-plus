@@ -14,6 +14,9 @@ The rules that matter:
     fallback wins before an excluded dish ever could.
   * A dish nobody has ranked yet is not ordered on a guess. It is reported so
     it can be ranked, and the best *ranked* dish that day is used instead.
+  * A date signed off by hand is left alone entirely: not the ranking, not the
+    fallback, nothing. It is the only way to end a day without lunch, which is
+    why it has to be asked for explicitly.
   * The orderable window comes from the school's own get_order_days, not from
     arithmetic on today's date -- it already accounts for cutoffs, holidays and
     the five-day limit.
@@ -98,6 +101,7 @@ def plan(user_row, client, today=None):
             "considered": [],
             "overridden": False,
             "is_fallback": False,
+            "skipped_by_hand": False,
         }
 
         if not slots:
@@ -119,10 +123,26 @@ def plan(user_row, client, today=None):
                 "excluded": meal_id in excluded,
             })
 
+        # Signed off this date by hand: order nothing at all, not even the
+        # fallback. This is the one instruction that beats the floor, so it is
+        # answered before anything is weighed.
+        override_row = chosen_by_hand.get(order_date)
+        if override_row is not None and overrides.is_skip(override_row["slot_menu_id"]):
+            decision["skipped_by_hand"] = True
+            decision["status"] = "skipped"
+            # An order already standing at school is not withdrawn by this: the
+            # app has no cancel call, so say so rather than imply it is undone.
+            decision["detail"] = (
+                "odjava, a naročilo pri šoli že stoji"
+                if existing_orders.get(order_date)
+                else "odjava"
+            )
+            decisions.append(decision)
+            continue
+
         # A meal picked by hand for this date beats everything else: the
         # ranking, an exclusion, and a dish that was never rated. Choosing it
-        # on the calendar is a more specific instruction than any of those.
-        override_row = chosen_by_hand.get(order_date)
+        # on the board is a more specific instruction than any of those.
         best = None
         if override_row is not None:
             best = next(

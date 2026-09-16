@@ -412,3 +412,118 @@ def test_the_fallback_dish_is_never_put_to_the_rating_pass(user):
     assert burger not in pending
     # ...and the pass can actually reach "done" without it.
     assert ranking.progress(user["id"])["total"] == 1
+
+
+# --- signing off a day ----------------------------------------------------
+#
+# The fallback otherwise guarantees lunch every day, so the only way to end a
+# day with nothing ordered is to ask for it. That is stored as an override
+# naming no slot, and it has to beat the ranking, the fallback and all.
+
+
+def test_signing_off_a_day_orders_nothing(user, monkeypatch):
+    import datetime
+
+    monkeypatch.setattr(picker.settings, "fallback_slot_name", "MALICA 7")
+    liked = add_meal("PIZZA")
+    ranking.save_rating(user["id"], liked, 95)
+    add_meal("REZERVA")
+
+    client = FakeClient(
+        menus=[
+            menu_row("2026-09-10", "s1", "MALICA 1", "PIZZA", 0),
+            menu_row("2026-09-10", "s7", "MALICA 7", "REZERVA", 6),
+        ],
+        order_days=[{"order_date": "2026-09-10", "location_id": "loc1"}],
+    )
+
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+    decision = picker.plan(user, client, today=datetime.date(2026, 9, 9))[0]
+
+    assert decision["choice"] is None, "not even the fallback"
+    assert decision["status"] == "skipped"
+    assert decision["skipped_by_hand"] is True
+    assert decision["detail"] == "odjava"
+
+
+def test_signing_off_still_reports_what_was_on_offer(user):
+    """The day is skipped, not hidden: the board still shows the menu."""
+    import datetime
+
+    add_meal("PIZZA")
+    client = FakeClient(
+        menus=[menu_row("2026-09-10", "s1", "MALICA 1", "PIZZA", 0)],
+        order_days=[{"order_date": "2026-09-10", "location_id": "loc1"}],
+    )
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+    decision = picker.plan(user, client, today=datetime.date(2026, 9, 9))[0]
+    assert len(decision["considered"]) == 1
+
+
+def test_signing_off_says_so_when_an_order_already_stands(user):
+    """There is no cancel call, so the detail must not imply one happened."""
+    import datetime
+
+    top = add_meal("PIZZA")
+    ranking.save_rating(user["id"], top, 95)
+    client = FakeClient(
+        menus=[menu_row("2026-09-10", "s1", "MALICA 1", "PIZZA", 0)],
+        order_days=[{"order_date": "2026-09-10", "location_id": "loc1"}],
+        orders=[{"order_date": "2026-09-10", "menu_id": "s1",
+                 "menu_name": "MALICA 1", "canceled": False}],
+    )
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+    decision = picker.plan(user, client, today=datetime.date(2026, 9, 9))[0]
+
+    assert decision["status"] == "skipped"
+    assert "že stoji" in decision["detail"]
+
+
+def test_signing_off_applies_only_to_its_own_date(user):
+    import datetime
+
+    top = add_meal("PIZZA")
+    ranking.save_rating(user["id"], top, 95)
+    client = FakeClient(
+        menus=[
+            menu_row("2026-09-10", "s1", "MALICA 1", "PIZZA", 0),
+            menu_row("2026-09-11", "s2", "MALICA 1", "PIZZA", 0),
+        ],
+        order_days=[
+            {"order_date": "2026-09-10", "location_id": "loc1"},
+            {"order_date": "2026-09-11", "location_id": "loc1"},
+        ],
+    )
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+    decisions = picker.plan(user, client, today=datetime.date(2026, 9, 9))
+
+    assert decisions[0]["choice"] is None
+    assert decisions[1]["choice"]["slot_menu_id"] == "s2"
+
+
+def test_signing_off_can_be_undone(user):
+    import datetime
+
+    top = add_meal("PIZZA")
+    ranking.save_rating(user["id"], top, 95)
+    client = FakeClient(
+        menus=[menu_row("2026-09-10", "s1", "MALICA 1", "PIZZA", 0)],
+        order_days=[{"order_date": "2026-09-10", "location_id": "loc1"}],
+    )
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+    overrides.clear(user["id"], "2026-09-10")
+    decision = picker.plan(user, client, today=datetime.date(2026, 9, 9))[0]
+    assert decision["choice"]["slot_menu_id"] == "s1"
+
+
+def test_the_board_marks_a_signed_off_day(user):
+    import datetime
+
+    meal = add_meal("PIZZA")
+    observe("2026-09-10", "s1", "MALICA 1", meal, "PIZZA")
+    overrides.set_override(user["id"], "2026-09-10", overrides.SKIP, None)
+
+    day = overrides.days(user, today=datetime.date(2026, 9, 9))[0]
+    assert day["skipped"] is True
+    assert day["override"] is None
+    assert day["override_stale"] is False, "naming no slot is not a stale slot"
