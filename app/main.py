@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -14,9 +15,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, collector, db, overrides, picker, ranking, suggestions
+from . import auth, collector, db, fallback, overrides, picker, ranking, suggestions
 from .config import settings
-from .malcomat import AuthError, Client, MalcomatError
+from .malcomat import AuthError, MalcomatError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,6 +50,36 @@ def _scheduler_timezone():
 
 
 scheduler = BackgroundScheduler(timezone=_scheduler_timezone())
+
+#: Weekday names for the countdown label, Monday first.
+_DNEVI = (
+    "ponedeljek", "torek", "sreda", "četrtek", "petek", "sobota", "nedelja",
+)
+
+
+def next_pick_time(now=None):
+    """When the ordering job will next run.
+
+    Read from the same cron fields the scheduler is given, so the countdown on
+    the dashboard cannot drift away from what actually happens.
+    """
+    zone = _scheduler_timezone()
+    trigger = CronTrigger(
+        day_of_week=settings.pick_day_of_week,
+        hour=settings.pick_hour,
+        minute=settings.pick_minute,
+        timezone=zone,
+    )
+    return trigger.get_next_fire_time(None, now or datetime.now(zone))
+
+
+def pick_label(when):
+    """"v ponedeljek ob 07:00", or None when the schedule cannot be read."""
+    if when is None:
+        return None
+    return "v {} ob {:02d}:{:02d}".format(
+        _DNEVI[when.weekday()], when.hour, when.minute
+    )
 
 
 #: Paths reachable while the one-off explainer is still outstanding.
@@ -207,31 +238,26 @@ def logout():
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, user=Depends(require_user)):
-    meals = db.load_meals()
-    observations = db.query_one("SELECT COUNT(*) AS n FROM observation")["n"]
-    days = db.query_one("SELECT COUNT(DISTINCT menu_date) AS n FROM observation")["n"]
-    ranked = ranking.current_ranking(user["id"])
-    stats = ranking.progress(user["id"])
+    """The whole app on one screen: the switch, the rating prompt, the days.
 
-    recent_picks = db.query(
-        "SELECT * FROM pick WHERE user_id = ? ORDER BY order_date DESC LIMIT 10",
-        (user["id"],),
-    )
-    jobs = db.query("SELECT * FROM job_run ORDER BY started_at DESC LIMIT 5")
+    The day board is built from the local archive rather than a live call to
+    the school, so the page stays fast and still works when MALCOMAT is down.
+    """
+    stats = ranking.progress(user["id"])
+    overrides.clear_past(user["id"])
+    days = overrides.days(user)
+    when = next_pick_time()
 
     return render(
         request, "dashboard.html", user,
-        meal_count=len(meals),
-        observation_count=observations,
-        day_count=days,
-        ranked_count=len(ranked),
-        unranked_count=stats["to_rate"],
-        excluded_count=stats["excluded"],
-        in_progress=not stats["done"] and (stats["rated"] > 0 or stats["excluded"] > 0),
-        remaining=stats["to_rate"],
+        meal_count=len(db.load_meals()),
         progress=stats,
-        picks=[dict(p) for p in recent_picks],
-        jobs=[dict(j) for j in jobs],
+        rated_anything=stats["rated"] > 0,
+        days=days,
+        chosen_count=sum(1 for d in days if d["override"]),
+        archive_empty=not db.query_one("SELECT COUNT(*) AS n FROM observation")["n"],
+        next_pick_iso=when.isoformat() if when else None,
+        next_pick_label=pick_label(when),
     )
 
 
@@ -290,6 +316,11 @@ def rank_restart(request: Request, user=Depends(require_user)):
 
 @app.get("/meals", response_class=HTMLResponse)
 def meals_page(request: Request, user=Depends(require_user)):
+    """The league table: the order, the rejected pile, and what is still unrated.
+
+    All three columns are sent to the page together and come back together, so
+    a meal can be dragged from any one of them into any other.
+    """
     order = ranking.current_ranking(user["id"])
     scores = ranking.get_ratings(user["id"])
     close = ranking.close_to_neighbour(order, scores)
@@ -307,60 +338,52 @@ def meals_page(request: Request, user=Depends(require_user)):
         view["is_new"] = meal_id in fresh
         ranked.append(view)
 
-    others = []
+    # The daily fallback is the floor everything else is measured against, not
+    # one of the choices, so it is left out of the pile waiting to be rated.
+    floor = fallback.meal_ids()
+    rejected, unrated = [], []
     for meal_id in db.load_meals():
-        if meal_id in scores:
+        if meal_id in scores or meal_id in floor:
             continue
         view = meal_view(meal_id)
-        if view:
-            view["excluded"] = meal_id in excluded
-            others.append(view)
-    others.sort(key=lambda m: (not m["excluded"], m["name"]))
+        if view is None:
+            continue
+        (rejected if meal_id in excluded else unrated).append(view)
+    rejected.sort(key=lambda m: m["name"])
+    unrated.sort(key=lambda m: (-m["times_seen"], m["name"]))
 
-    return render(request, "meals.html", user, ranked=ranked, others=others,
-                  new_count=len(fresh))
+    return render(request, "meals.html", user, ranked=ranked, rejected=rejected,
+                  unrated=unrated, new_count=len(fresh))
 
 
-@app.post("/meals/order")
-def meals_order(request: Request, order: str = Form(...), user=Depends(require_user)):
-    """Save an order arranged by dragging. `order` is comma-separated meal ids."""
-    ids = [part for part in (order or "").split(",") if part]
-    if ids:
-        ranking.set_manual_order(user["id"], ids)
+@app.post("/meals/save")
+def meals_save(
+    request: Request,
+    order: str = Form(""),
+    rejected: str = Form(""),
+    unrated: str = Form(""),
+    scores: str = Form(""),
+    user=Depends(require_user),
+):
+    """Save the arranged list. The three columns arrive as comma-separated ids."""
+    def ids(raw):
+        return [part for part in (raw or "").split(",") if part]
+
+    try:
+        typed = json.loads(scores) if scores else {}
+    except ValueError:
+        typed = {}
+
+    ranking.apply_board(
+        user["id"], ids(order), ids(rejected), ids(unrated),
+        typed if isinstance(typed, dict) else {},
+    )
     return RedirectResponse("/meals", status_code=303)
 
 
 @app.post("/meals/acknowledge")
 def meals_acknowledge(request: Request, user=Depends(require_user)):
     ranking.acknowledge_new(user["id"])
-    return RedirectResponse("/meals", status_code=303)
-
-
-@app.post("/meals/exclude")
-def meals_exclude(
-    request: Request, meal_id: str = Form(...), user=Depends(require_user)
-):
-    ranking.exclude(user["id"], meal_id)
-    return RedirectResponse("/meals", status_code=303)
-
-
-@app.post("/meals/rate")
-def meals_rate(
-    request: Request,
-    meal_id: str = Form(...),
-    score: int = Form(...),
-    user=Depends(require_user),
-):
-    """Adjust a score later without redoing the whole pass."""
-    ranking.save_rating(user["id"], meal_id, score)
-    return RedirectResponse("/meals", status_code=303)
-
-
-@app.post("/meals/unexclude")
-def meals_unexclude(
-    request: Request, meal_id: str = Form(...), user=Depends(require_user)
-):
-    ranking.unexclude(user["id"], meal_id)
     return RedirectResponse("/meals", status_code=303)
 
 
@@ -400,54 +423,10 @@ def review_answer(
     return RedirectResponse("/review", status_code=303)
 
 
-# --- the week ------------------------------------------------------------
-
-
-@app.get("/week", response_class=HTMLResponse)
-def week_page(request: Request, user=Depends(require_user)):
-    """What the picker would choose right now, computed live and ordering nothing."""
-    password = auth.decrypt_password(user["password_enc"])
-    if not password:
-        return render(request, "week.html", user, decisions=None,
-                      error="Ni shranjenega gesla - prijavi se znova.")
-    try:
-        with Client() as client:
-            client.login(user["username"], password)
-            decisions = picker.plan(user, client)
-    except (MalcomatError, AuthError) as exc:
-        return render(request, "week.html", user, decisions=None, error=str(exc))
-
-    for decision in decisions:
-        for entry in decision["considered"]:
-            entry["view"] = meal_view(entry["meal_id"])
-        # Weekday for the short "pon 7. 9." label; the raw ISO date is not
-        # something anyone reads at a glance.
-        try:
-            decision["weekday"] = date.fromisoformat(decision["order_date"]).weekday()
-        except (TypeError, ValueError):
-            decision["weekday"] = None
-    return render(request, "week.html", user, decisions=decisions, error=None)
-
-
 # --- picking by hand -----------------------------------------------------
 
-
-@app.get("/override", response_class=HTMLResponse)
-def override_page(request: Request, user=Depends(require_user)):
-    """Calendar of upcoming days, with the meal for each one selectable.
-
-    Built from the local archive, so it neither logs into the school nor
-    orders anything -- it only records what the weekly job should do.
-    """
-    overrides.clear_past(user["id"])
-    days = overrides.days(user)
-    return render(
-        request, "override.html", user,
-        weeks=overrides.in_weeks(days),
-        day_count=len(days),
-        chosen_count=sum(1 for d in days if d["override"]),
-        archive_empty=not db.query_one("SELECT COUNT(*) AS n FROM observation")["n"],
-    )
+# The day board lives on the dashboard, so both of these come back to it. The
+# fragment reopens the day that was just changed instead of the first one.
 
 
 @app.post("/override/set")
@@ -459,7 +438,7 @@ def override_set(
     user=Depends(require_user),
 ):
     overrides.set_override(user["id"], order_date, slot_menu_id, meal_id or None)
-    return RedirectResponse("/override#d-{}".format(order_date), status_code=303)
+    return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
 
 @app.post("/override/clear")
@@ -467,7 +446,7 @@ def override_clear(
     request: Request, order_date: str = Form(...), user=Depends(require_user)
 ):
     overrides.clear(user["id"], order_date)
-    return RedirectResponse("/override#d-{}".format(order_date), status_code=303)
+    return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
 
 # --- manual job triggers -------------------------------------------------
@@ -475,20 +454,13 @@ def override_clear(
 
 @app.post("/run/collect")
 def run_collect(request: Request, user=Depends(require_user)):
+    """Read the menu now. Offered only while the archive is still empty: after
+    that the daily job keeps it current and there is nothing to press."""
     try:
         stats = collector.collect_for_user(user)
         log.info("manual collect: %s", stats)
     except (MalcomatError, AuthError) as exc:
         log.warning("manual collect failed: %s", exc)
-    return RedirectResponse("/", status_code=303)
-
-
-@app.post("/run/pick")
-def run_pick(request: Request, user=Depends(require_user)):
-    try:
-        picker.pick_for_user(user)
-    except (MalcomatError, AuthError) as exc:
-        log.warning("manual pick failed: %s", exc)
     return RedirectResponse("/", status_code=303)
 
 

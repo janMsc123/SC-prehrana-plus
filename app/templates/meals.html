@@ -1,44 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Jedi &middot; Prehrana Plus{% endblock %}
+{% block title %}Lestvica jedi &middot; Prehrana Plus{% endblock %}
 {% block content %}
-<h1>Tvoj vrstni red</h1>
-<p class="sub">Od najljubše navzdol. Povleci, da premakneš.</p>
+<h1>Lestvica jedi</h1>
 
 {% if new_count %}
 <div class="notice">
   <strong>{{ new_count }}</strong> {{ 'nova jed' if new_count == 1 else 'novih jedi' }}
-  na seznamu &mdash; oznaka <span class="tag new">NOVO</span>.
+  na seznamu, oznaka <span class="tag new">NOVO</span>.
   <form method="post" action="/meals/acknowledge" class="inline">
     <button class="link" type="submit">skrij</button>
   </form>
 </div>
 {% endif %}
 
-{% if ranked %}
-{# One list, one form. The × uses formaction so excluding a meal does not need
-   a nested form -- which would be invalid inside the reorder form. #}
-<form method="post" action="/meals/order" id="orderForm">
+{# One form for the whole board. The three columns are read back out of the
+   page on submit, so a meal can be dragged from any of them into any other. #}
+<form method="post" action="/meals/save" id="boardForm">
   <input type="hidden" name="order" id="orderField">
-  <ol class="ranked draggable" id="mealList">
-    {% for meal in ranked %}
-    <li data-id="{{ meal.id }}" draggable="true"
-        class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
-      <span class="grip" aria-hidden="true">&#10287;</span>
-      <span class="name">{{ meal.name }}</span>
-      {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
-      <span class="meta">
-        {% if meal.score %}<span class="score">{{ meal.score }}</span>{% endif %}
-        <span class="movers">
-          <button type="button" class="move" data-dir="-1" aria-label="Gor">&#9650;</button>
-          <button type="button" class="move" data-dir="1" aria-label="Dol">&#9660;</button>
-        </span>
-        <button class="excl" type="submit" formaction="/meals/exclude"
-                name="meal_id" value="{{ meal.id }}"
-                title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
-      </span>
-    </li>
-    {% endfor %}
-  </ol>
+  <input type="hidden" name="rejected" id="rejectedField">
+  <input type="hidden" name="unrated" id="unratedField">
+  <input type="hidden" name="scores" id="scoresField">
+
+  <div class="rank-board">
+    <div class="rank-col">
+      <ol class="ranked draggable dnd" id="rankedList" data-role="ranked">
+        {% for meal in ranked %}
+        <li data-id="{{ meal.id }}"
+            class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
+          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="{{ meal.score or '' }}" aria-label="Ocena za {{ meal.name }}">
+            <button type="button" class="excl" data-to="rejected"
+                    title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <div class="cut-line"><span>se ne naroči &darr;</span></div>
+
+      <ol class="ranked plain dnd" id="rejectedList" data-role="rejected">
+        {% for meal in rejected %}
+        <li data-id="{{ meal.id }}" class="is-out">
+          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="" aria-label="Ocena za {{ meal.name }}" hidden>
+            <button type="button" class="excl back" data-to="unrated"
+                    title="Nazaj med neocenjene" aria-label="Nazaj med neocenjene">&#8617;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    <div class="rank-col side">
+      <h2 class="col-head">Neocenjene <span class="count" id="unratedCount">{{ unrated|length }}</span></h2>
+      <ol class="ranked plain dnd" id="unratedList" data-role="unrated">
+        {% for meal in unrated %}
+        <li data-id="{{ meal.id }}">
+          <button type="button" class="grip" aria-label="Premakni">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="" aria-label="Ocena za {{ meal.name }}" hidden>
+            <button type="button" class="excl" data-to="rejected"
+                    title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if not unrated %}<p class="empty-hint">Nič ne čaka na oceno.</p>{% endif %}
+    </div>
+  </div>
+
   <div class="save-bar" id="saveBar" hidden>
     <span>Spremenjeno.</span>
     <button class="btn" type="submit">Shrani</button>
@@ -46,121 +85,233 @@
   </div>
 </form>
 
-<p class="legend">
-  <span><strong>&times;</strong> = raje meni 7 kot to</span>
-  <span><span class="swatch close"></span> razlika {{ tie_window }} ali manj &mdash; vrstni red je poljuben</span>
-</p>
-{% else %}
-<div class="card">
-  <p>Še nič ni ocenjeno.</p>
-  <a class="btn" href="/rank">Začni ocenjevanje</a>
-</div>
-{% endif %}
-
-{% if others %}
-<details class="fold">
-  <summary>Neocenjene in zavrnjene ({{ others|length }})</summary>
-  <p class="muted" style="font-size:.82rem;margin:.2rem 0 .6rem">
-    Te se ne naročijo. Če so nekega dne na voljo samo take, dobiš meni 7.
-  </p>
-  <ol class="ranked plain">
-    {% for meal in others %}
-    <li>
-      <span class="name" {% if meal.excluded %}style="text-decoration:line-through;opacity:.6"{% endif %}>
-        {{ meal.name }}
-      </span>
-      <span class="meta">
-        {% if meal.excluded %}
-          <form method="post" action="/meals/unexclude" class="inline">
-            <input type="hidden" name="meal_id" value="{{ meal.id }}">
-            <button class="link" type="submit">vrni</button>
-          </form>
-        {% else %}
-          <span class="tag skip">ni ocenjena</span>
-        {% endif %}
-      </span>
-    </li>
-    {% endfor %}
-  </ol>
-  <p class="actions"><a class="btn ghost" href="/rank">Oceni manjkajoče</a></p>
-</details>
-{% endif %}
-
 <script>
 (function () {
-  var list = document.getElementById('mealList');
-  if (!list) return;
-  var form = document.getElementById('orderForm');
-  var field = document.getElementById('orderField');
-  var bar = document.getElementById('saveBar');
-  var original = ids();
+  var form = document.getElementById('boardForm');
+  if (!form) return;
 
-  function ids() {
+  var lists = {
+    ranked: document.getElementById('rankedList'),
+    rejected: document.getElementById('rejectedList'),
+    unrated: document.getElementById('unratedList')
+  };
+  var fields = {
+    ranked: document.getElementById('orderField'),
+    rejected: document.getElementById('rejectedField'),
+    unrated: document.getElementById('unratedField')
+  };
+  var bar = document.getElementById('saveBar');
+  var counter = document.getElementById('unratedCount');
+
+  function ids(list) {
     return Array.prototype.map.call(list.children, function (li) {
       return li.dataset.id;
     });
   }
 
-  function renumber() {
-    var now = ids();
-    var changed = now.join(',') !== original.join(',');
-    bar.hidden = !changed;
-    field.value = now.join(',');
+  function snapshot() {
+    var parts = [];
+    Object.keys(lists).forEach(function (key) {
+      parts.push(key + ':' + ids(lists[key]).join(','));
+    });
+    Array.prototype.forEach.call(lists.ranked.children, function (li) {
+      parts.push(li.dataset.id + '=' + li.querySelector('.score').value);
+    });
+    return parts.join('|');
   }
 
-  // Arrow buttons: the reliable path on touch screens and with a keyboard.
-  list.addEventListener('click', function (event) {
-    var button = event.target.closest('.move');
-    if (!button) return;
-    var li = button.closest('li');
-    var dir = parseInt(button.dataset.dir, 10);
-    if (dir < 0 && li.previousElementSibling) {
-      list.insertBefore(li, li.previousElementSibling);
-    } else if (dir > 0 && li.nextElementSibling) {
-      list.insertBefore(li.nextElementSibling, li);
+  var original = snapshot();
+
+  // --- scores ------------------------------------------------------------
+
+  function scoreOf(li) {
+    if (!li) return null;
+    var value = parseInt(li.querySelector('.score').value, 10);
+    return isNaN(value) ? null : value;
+  }
+
+  function clamp(value) { return Math.max(1, Math.min(100, value)); }
+
+  // The score a meal gets for landing where it was dropped: halfway between
+  // the rated meals above and below it, which is what the server would work
+  // out too. Doing it here as well means the number appears straight away.
+  function derive(li) {
+    var above = null, below = null, node;
+    for (node = li.previousElementSibling; node; node = node.previousElementSibling) {
+      above = scoreOf(node);
+      if (above !== null) break;
     }
-    renumber();
-    button.focus();
+    for (node = li.nextElementSibling; node; node = node.nextElementSibling) {
+      below = scoreOf(node);
+      if (below !== null) break;
+    }
+    if (above === null && below === null) return 50;
+    if (above === null) return clamp(below + 5);
+    if (below === null) return clamp(above - 5);
+    if (above - below <= 1) return below;
+    return clamp(Math.floor((above + below) / 2));
+  }
+
+  // A row carries its number only while it is in the ranking. Out of it, the
+  // number is meaningless, so it is cleared rather than left to mislead.
+  function dress(li) {
+    var input = li.querySelector('.score');
+    var button = li.querySelector('.excl');
+    var role = li.parentNode.dataset.role;
+    if (role === 'ranked') {
+      input.hidden = false;
+      if (input.value === '') input.value = derive(li);
+      li.classList.remove('is-out');
+      button.dataset.to = 'rejected';
+      button.innerHTML = '&times;';
+      button.title = 'Nikoli te jedi';
+    } else {
+      input.hidden = true;
+      input.value = '';
+      li.classList.toggle('is-out', role === 'rejected');
+      button.dataset.to = role === 'rejected' ? 'unrated' : 'rejected';
+      button.innerHTML = role === 'rejected' ? '&#8617;' : '&times;';
+      button.title = role === 'rejected' ? 'Nazaj med neocenjene' : 'Nikoli te jedi';
+      button.classList.toggle('back', role === 'rejected');
+    }
+  }
+
+  function sync() {
+    Object.keys(lists).forEach(function (key) {
+      fields[key].value = ids(lists[key]).join(',');
+    });
+    var scores = {};
+    Array.prototype.forEach.call(lists.ranked.children, function (li) {
+      var value = scoreOf(li);
+      if (value !== null) scores[li.dataset.id] = value;
+    });
+    document.getElementById('scoresField').value = JSON.stringify(scores);
+    if (counter) counter.textContent = lists.unrated.children.length;
+    Object.keys(lists).forEach(function (key) {
+      lists[key].classList.toggle('is-empty', lists[key].children.length === 0);
+    });
+    bar.hidden = snapshot() === original;
+  }
+
+  function moveTo(li, role) {
+    lists[role].appendChild(li);
+    dress(li);
+    sync();
+  }
+
+  form.addEventListener('click', function (event) {
+    var button = event.target.closest('.excl');
+    if (!button) return;
+    event.preventDefault();
+    moveTo(button.closest('li'), button.dataset.to);
   });
 
-  // Pointer dragging: one code path for mouse, pen and touch. The two buttons
-  // living inside a row must not start a drag, or they can never be pressed.
-  var dragging = null;
-  list.addEventListener('pointerdown', function (event) {
-    if (event.target.closest('.move') || event.target.closest('.excl')) return;
-    var li = event.target.closest('li');
-    if (!li) return;
-    dragging = li;
-    li.classList.add('dragging');
-    li.setPointerCapture(event.pointerId);
+  // Typing a number re-slots the row where that number belongs, so the list
+  // never shows an order its own figures contradict.
+  form.addEventListener('change', function (event) {
+    var input = event.target.closest('.score');
+    if (!input) return;
+    var li = input.closest('li');
+    if (li.parentNode !== lists.ranked) return;
+    var value = parseInt(input.value, 10);
+    input.value = isNaN(value) ? derive(li) : clamp(value);
+    resort(li);
+    sync();
   });
 
-  list.addEventListener('pointermove', function (event) {
+  function resort(li) {
+    var target = clamp(parseInt(li.querySelector('.score').value, 10));
+    var rows = Array.prototype.filter.call(lists.ranked.children, function (other) {
+      return other !== li;
+    });
+    var before = null;
+    for (var i = 0; i < rows.length; i++) {
+      var other = scoreOf(rows[i]);
+      if (other !== null && other < target) { before = rows[i]; break; }
+    }
+    lists.ranked.insertBefore(li, before);
+  }
+
+  // --- dragging ----------------------------------------------------------
+  //
+  // One pointer path for mouse, pen and touch. The drag only begins after the
+  // pointer has actually travelled, so a click on the number box or the button
+  // inside a row still reaches them.
+
+  var candidate = null, dragging = null, startX = 0, startY = 0;
+  var THRESHOLD = 5;
+
+  document.addEventListener('pointerdown', function (event) {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    if (event.target.closest('.score')) return;
+    if (event.target.closest('button:not(.grip)')) return;
+    var li = event.target.closest('li[data-id]');
+    if (!li || !li.parentNode.classList.contains('dnd')) return;
+    candidate = li;
+    startX = event.clientX;
+    startY = event.clientY;
+  });
+
+  document.addEventListener('pointermove', function (event) {
+    if (!dragging && candidate) {
+      if (Math.abs(event.clientX - startX) < THRESHOLD &&
+          Math.abs(event.clientY - startY) < THRESHOLD) return;
+      dragging = candidate;
+      dragging.classList.add('dragging');
+      // Out of the way of elementFromPoint, and out of the way of the text
+      // selection a mouse drag would otherwise paint across the page.
+      dragging.style.pointerEvents = 'none';
+      document.body.classList.add('dragging-row');
+    }
     if (!dragging) return;
     event.preventDefault();
+
     var under = document.elementFromPoint(event.clientX, event.clientY);
-    var target = under && under.closest ? under.closest('li') : null;
-    if (!target || target === dragging || target.parentNode !== list) return;
-    var box = target.getBoundingClientRect();
-    var below = event.clientY > box.top + box.height / 2;
-    list.insertBefore(dragging, below ? target.nextSibling : target);
+    if (!under || !under.closest) return;
+    var over = under.closest('li[data-id]');
+    if (over && over.parentNode.classList.contains('dnd')) {
+      var box = over.getBoundingClientRect();
+      var below = event.clientY > box.top + box.height / 2;
+      over.parentNode.insertBefore(dragging, below ? over.nextSibling : over);
+      return;
+    }
+    var list = under.closest('ol.dnd');
+    if (list && list !== dragging.parentNode) list.appendChild(dragging);
   });
 
   function endDrag() {
+    candidate = null;
     if (!dragging) return;
     dragging.classList.remove('dragging');
+    dragging.style.pointerEvents = '';
+    document.body.classList.remove('dragging-row');
+    dress(dragging);
     dragging = null;
-    renumber();
+    sync();
   }
-  list.addEventListener('pointerup', endDrag);
-  list.addEventListener('pointercancel', endDrag);
 
-  // A submit must always carry the current order -- except the × button, which
-  // posts to a different action and only needs its own meal_id.
-  form.addEventListener('submit', function (event) {
-    if (event.submitter && event.submitter.classList.contains('excl')) return;
-    field.value = ids().join(',');
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+
+  // Keyboard and any browser without pointer events: the grip moves a row one
+  // place with the arrow keys, so the list is never drag-only.
+  form.addEventListener('keydown', function (event) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    var li = event.target.closest('li[data-id]');
+    if (!li || !event.target.closest('.grip')) return;
+    event.preventDefault();
+    if (event.key === 'ArrowUp' && li.previousElementSibling) {
+      li.parentNode.insertBefore(li, li.previousElementSibling);
+    } else if (event.key === 'ArrowDown' && li.nextElementSibling) {
+      li.parentNode.insertBefore(li.nextElementSibling, li);
+    }
+    dress(li);
+    sync();
+    event.target.focus();
   });
+
+  form.addEventListener('submit', sync);
+  sync();
 })();
 </script>
 {% endblock %}

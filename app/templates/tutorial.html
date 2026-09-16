@@ -7,13 +7,13 @@
   <span class="step-num">1</span>
   <div>
     <h2 style="margin-top:0">Jedi lahko premikaš</h2>
-    <p>Vrstni red določa, kaj se naroči. Povleci jed ali uporabi <strong>▲ ▼</strong>.</p>
+    <p>Vrstni red določa, kaj se naroči. Primi jed za <strong>⠿</strong> in jo povleci.</p>
     <div class="demo-list">
-      <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-move">▲ ▼</span></div>
-      <div class="demo-row dragging"><span class="demo-grip">⠿</span> PIZZA S ŠUNKO <span class="demo-move">▲ ▼</span></div>
-      <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-move">▲ ▼</span></div>
+      <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-score">88</span></div>
+      <div class="demo-row dragging"><span class="demo-grip">⠿</span> PIZZA S ŠUNKO <span class="demo-score">84</span></div>
+      <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-score">72</span></div>
     </div>
-    <p class="muted" style="font-size:.9rem;margin-bottom:0">Kar premakneš, ostane tam.</p>
+    <p class="muted" style="font-size:.9rem;margin-bottom:0">Kar premakneš, ostane tam. Oceno lahko tudi vpišeš.</p>
   </div>
 </div>
 
@@ -21,7 +21,7 @@
   <span class="step-num">2</span>
   <div>
     <h2 style="margin-top:0">Rumeno pomeni &raquo;skoraj enako&laquo;</h2>
-    <p>Razlika <strong>{{ tie_window }} točki ali manj</strong> &mdash; vrstni red med njima je vseeno.</p>
+    <p>Razlika <strong>{{ tie_window }} točki ali manj</strong>, vrstni red med njima je vseeno.</p>
     <div class="demo-list">
       <div class="demo-row close"><span class="demo-grip">⠿</span> TORTILJA PIŠČANČJA <span class="demo-score">78</span></div>
       <div class="demo-row close"><span class="demo-grip">⠿</span> HOT DOG <span class="demo-score">77</span></div>
@@ -35,13 +35,14 @@
   <span class="step-num">3</span>
   <div>
     <h2 style="margin-top:0">Nove jedi se pojavijo same</h2>
-    <p>Novo jed oceniš enkrat, uvrsti se po oceni in dobi oznako <span class="tag new">NOVO</span>.</p>
+    <p>Neocenjene čakajo v desnem stolpcu. Povleci jed v lestvico in oceno dobi
+       sama, po sosedih. Nova jed dobi oznako <span class="tag new">NOVO</span>.</p>
     <div class="demo-list">
       <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-score">88</span></div>
       <div class="demo-row is-new"><span class="demo-grip">⠿</span> NOVA JED <span class="tag new">NOVO</span> <span class="demo-score">84</span></div>
       <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-score">72</span></div>
     </div>
-    <p class="muted" style="font-size:.9rem;margin-bottom:0">Najdeš jih na vrhu strani <strong>Jedi</strong>.</p>
+    <p class="muted" style="font-size:.9rem;margin-bottom:0">Najdeš jih na vrhu <strong>Lestvice jedi</strong>.</p>
   </div>
 </div>
 

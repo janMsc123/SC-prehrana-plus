@@ -11,10 +11,11 @@ setting a new one replaces the old. They are stored against `slot_menu_id`
 because that is what the school's order call takes; the meal id rides along so
 the choice can still be named in the UI.
 
-The calendar is built from the local `observation` archive rather than from a
-live call to the school, so the page stays fast and works even when MALCOMAT is
-down. The consequence is that it can only show dates the collector has already
-seen -- a day the archive has never recorded simply is not offered.
+The day board on the dashboard is built from the local `observation` archive
+rather than from a live call to the school, so the page stays fast and works
+even when MALCOMAT is down. The consequence is that it can only show dates the
+collector has already seen -- a day the archive has never recorded simply is
+not offered.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from datetime import date, timedelta
 
 from . import db, ranking
 
-#: How far ahead the calendar looks. The school publishes roughly three weeks,
+#: How far ahead the day board looks. The school publishes roughly three weeks,
 #: and the collector sweeps 28 days, so this matches what can actually be there.
 HORIZON_DAYS = 28
 
@@ -83,7 +84,7 @@ def clear_past(user_id, today=None):
     )
 
 
-# --- the calendar --------------------------------------------------------
+# --- the day board -------------------------------------------------------
 
 
 def _auto_choice(slots, positions, excluded):
@@ -91,7 +92,7 @@ def _auto_choice(slots, positions, excluded):
 
     Mirrors the rule in picker.plan: best ranked position wins, exclusions and
     unranked dishes are passed over, and when nothing clears the floor the
-    daily fallback is taken. Kept here so the calendar shows the same answer
+    daily fallback is taken. Kept here so the board shows the same answer
     the picker will reach, without a network call.
     """
     from . import fallback
@@ -133,6 +134,8 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
         params.append(location_id)
     sql += " ORDER BY menu_date, sort_order"
 
+    from . import fallback
+
     positions = ranking.rank_position(user_row["id"])
     excluded = ranking.excluded_meals(user_row["id"])
     chosen = for_dates(user_row["id"])
@@ -145,11 +148,14 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
             {
                 "slot_menu_id": row["slot_menu_id"],
                 "slot_name": row["slot_name"],
+                "location_name": row["location_name"],
                 "meal_id": meal_id,
                 "name": (meal["head"] if meal else None) or row["description_raw"],
                 "description": row["description_raw"],
                 "position": positions.get(meal_id),
                 "excluded": meal_id in excluded,
+                # The floor is never rated, so "not rated" would misdescribe it.
+                "is_fallback": fallback.is_fallback_slot(row["slot_name"]),
             }
         )
 
@@ -167,6 +173,9 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
             {
                 "date": menu_date,
                 "weekday": date.fromisoformat(menu_date).weekday(),
+                "location": next(
+                    (s["location_name"] for s in slots if s["location_name"]), None
+                ),
                 "slots": slots,
                 "auto": auto,
                 "override": next(
@@ -179,12 +188,3 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
             }
         )
     return out
-
-
-def in_weeks(day_list):
-    """Group days into ISO weeks so the template can lay out a calendar."""
-    weeks = OrderedDict()
-    for day in day_list:
-        iso = date.fromisoformat(day["date"]).isocalendar()
-        weeks.setdefault((iso[0], iso[1]), []).append(day)
-    return list(weeks.values())
