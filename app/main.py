@@ -430,6 +430,17 @@ def review_answer(
 # fragment reopens the day that was just changed instead of the first one.
 
 
+def _apply_override_now(user, order_date):
+    """Push the day's just-saved choice to school instead of waiting for the
+    next scheduled run. Best-effort: a failure here is logged and the board
+    still shows the override, ready to be picked up by the next run."""
+    try:
+        picker.apply_override(user, order_date)
+    except (MalcomatError, AuthError) as exc:
+        log.warning("instant order failed for %s %s: %s",
+                    user["username"], order_date, exc)
+
+
 @app.post("/override/set")
 def override_set(
     request: Request,
@@ -439,6 +450,8 @@ def override_set(
     user=Depends(require_user),
 ):
     overrides.set_override(user["id"], order_date, slot_menu_id, meal_id or None)
+    if not overrides.is_skip(slot_menu_id):
+        _apply_override_now(user, order_date)
     return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
 
@@ -447,6 +460,7 @@ def override_clear(
     request: Request, order_date: str = Form(...), user=Depends(require_user)
 ):
     overrides.clear(user["id"], order_date)
+    _apply_override_now(user, order_date)
     return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
 

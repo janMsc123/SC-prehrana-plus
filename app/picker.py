@@ -242,6 +242,45 @@ def _record(user_id, decision, status, detail):
     )
 
 
+def apply_override(user_row, order_date, dry_run=None):
+    """Push a hand-made choice for one date to school right away.
+
+    Called straight after the dashboard board writes an override (or clears
+    one back to automatic), so what stands at school matches what the board
+    now shows instead of waiting for the next scheduled run. `plan` already
+    reads the override back out of the database, so this is the same
+    resolution `pick_for_user` uses, just placed for one date instead of the
+    whole window.
+    """
+    dry_run = (not settings.place_orders) if dry_run is None else dry_run
+
+    password = collector.decrypt_password(user_row["password_enc"])
+    if not password:
+        raise MalcomatError("no stored password for {}".format(user_row["username"]))
+
+    with Client() as client:
+        client.login(user_row["username"], password)
+        decisions = plan(user_row, client, today=date.today())
+        decision = next(
+            (d for d in decisions if d["order_date"] == str(order_date)), None
+        )
+        if decision is None or decision["status"] != "to_order":
+            return decision
+
+        if dry_run:
+            decision["status"] = "dry_run"
+            _record(user_row["id"], decision, "dry_run",
+                    "would order {}".format(decision["choice"]["slot_name"]))
+            return decision
+
+        client.place_order(decision["choice"]["slot_menu_id"], order_date)
+
+    decision["status"] = "placed"
+    _record(user_row["id"], decision, "placed",
+            "ordered {}".format(decision["choice"]["slot_name"]))
+    return decision
+
+
 def pick_for_user(user_row, today=None, dry_run=None):
     """Plan and then place the orders."""
     dry_run = (not settings.place_orders) if dry_run is None else dry_run
