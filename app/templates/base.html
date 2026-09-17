@@ -18,14 +18,11 @@
     <span class="who">{{ user.first_name or user.username }}</span>
     <form method="post" action="/logout"><button class="link">Odjava</button></form>
   </div>
-  {# Five tabs is what fits a phone without scrolling. Ujemanja only earns a
-     slot while something is actually waiting; Predlogi lives in the footer. #}
+  {# Two tabs: the days on one side, the league table on the other. Ujemanja
+     earns a slot while something is waiting; Predlogi is in the footer. #}
   <div class="tabs">
     <a href="/"{% if here == '/' %} aria-current="page"{% endif %}>Domov</a>
-    <a href="/week"{% if here == '/week' %} aria-current="page"{% endif %}>Teden</a>
-    <a href="/override"{% if here == '/override' %} aria-current="page"{% endif %}>Koledar</a>
-    <a href="/rank"{% if here == '/rank' %} aria-current="page"{% endif %}>Oceni</a>
-    <a href="/meals"{% if here == '/meals' %} aria-current="page"{% endif %}>Jedi</a>
+    <a href="/meals"{% if here == '/meals' %} aria-current="page"{% endif %}>Lestvica jedi</a>
     {% if is_admin and (pending_questions or here == '/review') %}
     <a href="/review"{% if here == '/review' %} aria-current="page"{% endif %}>
       Ujemanja

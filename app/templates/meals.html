@@ -1,44 +1,111 @@
 {% extends "base.html" %}
-{% block title %}Jedi &middot; Prehrana Plus{% endblock %}
+{% block title %}Lestvica jedi &middot; Prehrana Plus{% endblock %}
 {% block content %}
-<h1>Tvoj vrstni red</h1>
-<p class="sub">Od najljubše navzdol. Povleci, da premakneš.</p>
+<h1>Lestvica jedi</h1>
 
 {% if new_count %}
 <div class="notice">
   <strong>{{ new_count }}</strong> {{ 'nova jed' if new_count == 1 else 'novih jedi' }}
-  na seznamu &mdash; oznaka <span class="tag new">NOVO</span>.
+  na seznamu, oznaka <span class="tag new">NOVO</span>.
   <form method="post" action="/meals/acknowledge" class="inline">
     <button class="link" type="submit">skrij</button>
   </form>
 </div>
 {% endif %}
 
-{% if ranked %}
-{# One list, one form. The × uses formaction so excluding a meal does not need
-   a nested form -- which would be invalid inside the reorder form. #}
-<form method="post" action="/meals/order" id="orderForm">
+{# One form for the whole board. The three columns are read back out of the
+   page on submit, so a meal can go from any of them into any other. #}
+<form method="post" action="/meals/save" id="boardForm">
   <input type="hidden" name="order" id="orderField">
-  <ol class="ranked draggable" id="mealList">
-    {% for meal in ranked %}
-    <li data-id="{{ meal.id }}" draggable="true"
-        class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
-      <span class="grip" aria-hidden="true">&#10287;</span>
-      <span class="name">{{ meal.name }}</span>
-      {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
-      <span class="meta">
-        {% if meal.score %}<span class="score">{{ meal.score }}</span>{% endif %}
-        <span class="movers">
-          <button type="button" class="move" data-dir="-1" aria-label="Gor">&#9650;</button>
-          <button type="button" class="move" data-dir="1" aria-label="Dol">&#9660;</button>
-        </span>
-        <button class="excl" type="submit" formaction="/meals/exclude"
-                name="meal_id" value="{{ meal.id }}"
-                title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
-      </span>
-    </li>
-    {% endfor %}
-  </ol>
+  <input type="hidden" name="rejected" id="rejectedField">
+  <input type="hidden" name="unrated" id="unratedField">
+  <input type="hidden" name="scores" id="scoresField">
+
+  <div class="rank-toolbar">
+    <input type="search" id="searchBox" placeholder="Poišči jed" autocomplete="off"
+           aria-label="Poišči jed">
+    <span class="found" id="foundCount" hidden></span>
+  </div>
+
+  <div class="rank-board">
+    <div class="rank-col">
+      <ol class="ranked dnd" id="rankedList" data-role="ranked">
+        {% for meal in ranked %}
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}"
+            class="{% if meal.close %}close{% endif %}{% if meal.is_new %} is-new{% endif %}">
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          {% if meal.is_new %}<span class="tag new">NOVO</span>{% endif %}
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="{{ meal.score or '' }}" aria-label="Ocena za {{ meal.name }}">
+            <button type="button" class="excl" data-to="rejected"
+                    title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <div class="cut-line"><span>se ne naroči &darr;</span></div>
+
+      <ol class="ranked plain dnd" id="rejectedList" data-role="rejected">
+        {% for meal in rejected %}
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}" class="is-out">
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="" aria-label="Ocena za {{ meal.name }}" hidden>
+            <button type="button" class="excl back" data-to="unrated"
+                    title="Nazaj med neocenjene" aria-label="Nazaj med neocenjene">&#8617;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+
+    <div class="rank-col side">
+      <h2 class="col-head">
+        Neocenjene <span class="count" id="unratedCount">{{ unrated|length }}</span>
+        {% if unrated %}<a class="col-link" href="/rank">oceni po vrsti</a>{% endif %}
+      </h2>
+      <ol class="ranked plain dnd" id="unratedList" data-role="unrated">
+        {% for meal in unrated %}
+        <li data-id="{{ meal.id }}" data-name="{{ meal.name|lower }}">
+          <span class="pos"></span>
+          <button type="button" class="grip" aria-label="Premakni {{ meal.name }}">&#10287;</button>
+          <span class="name">{{ meal.name }}</span>
+          <span class="meta">
+            <input class="score" type="number" min="1" max="100" inputmode="numeric"
+                   value="" aria-label="Ocena za {{ meal.name }}" hidden>
+            <button type="button" class="excl" data-to="rejected"
+                    title="Nikoli te jedi" aria-label="Nikoli te jedi">&times;</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if not unrated %}<p class="empty-hint">Nič ne čaka na oceno.</p>{% endif %}
+    </div>
+  </div>
+
+  <p class="hint" id="hint">
+    Tapni <strong>&#10287;</strong> in izberi, kam gre. Ali pa vpiši oceno,
+    jed se premakne sama.
+  </p>
+
+  {# Shown while a meal is lifted. It keeps the name in sight, so the whole
+     list can be scrolled or searched without losing track of what is held. #}
+  <div class="move-bar" id="moveBar" hidden>
+    <span class="holding">Premikaš <b id="heldName"></b></span>
+    <span class="move-actions">
+      <button type="button" class="btn ghost small" data-jump="top">Na vrh</button>
+      <button type="button" class="btn ghost small" data-jump="bottom">Na dno</button>
+      <button type="button" class="btn ghost small" id="cancelMove">Prekliči</button>
+    </span>
+  </div>
+
   <div class="save-bar" id="saveBar" hidden>
     <span>Spremenjeno.</span>
     <button class="btn" type="submit">Shrani</button>
@@ -46,121 +113,414 @@
   </div>
 </form>
 
-<p class="legend">
-  <span><strong>&times;</strong> = raje meni 7 kot to</span>
-  <span><span class="swatch close"></span> razlika {{ tie_window }} ali manj &mdash; vrstni red je poljuben</span>
-</p>
-{% else %}
-<div class="card">
-  <p>Še nič ni ocenjeno.</p>
-  <a class="btn" href="/rank">Začni ocenjevanje</a>
-</div>
-{% endif %}
-
-{% if others %}
-<details class="fold">
-  <summary>Neocenjene in zavrnjene ({{ others|length }})</summary>
-  <p class="muted" style="font-size:.82rem;margin:.2rem 0 .6rem">
-    Te se ne naročijo. Če so nekega dne na voljo samo take, dobiš meni 7.
-  </p>
-  <ol class="ranked plain">
-    {% for meal in others %}
-    <li>
-      <span class="name" {% if meal.excluded %}style="text-decoration:line-through;opacity:.6"{% endif %}>
-        {{ meal.name }}
-      </span>
-      <span class="meta">
-        {% if meal.excluded %}
-          <form method="post" action="/meals/unexclude" class="inline">
-            <input type="hidden" name="meal_id" value="{{ meal.id }}">
-            <button class="link" type="submit">vrni</button>
-          </form>
-        {% else %}
-          <span class="tag skip">ni ocenjena</span>
-        {% endif %}
-      </span>
-    </li>
-    {% endfor %}
-  </ol>
-  <p class="actions"><a class="btn ghost" href="/rank">Oceni manjkajoče</a></p>
-</details>
-{% endif %}
-
 <script>
 (function () {
-  var list = document.getElementById('mealList');
-  if (!list) return;
-  var form = document.getElementById('orderForm');
-  var field = document.getElementById('orderField');
-  var bar = document.getElementById('saveBar');
-  var original = ids();
+  var form = document.getElementById('boardForm');
+  if (!form) return;
 
-  function ids() {
-    return Array.prototype.map.call(list.children, function (li) {
-      return li.dataset.id;
+  var lists = {
+    ranked: document.getElementById('rankedList'),
+    rejected: document.getElementById('rejectedList'),
+    unrated: document.getElementById('unratedList')
+  };
+  var fields = {
+    ranked: document.getElementById('orderField'),
+    rejected: document.getElementById('rejectedField'),
+    unrated: document.getElementById('unratedField')
+  };
+  var order = ['ranked', 'rejected', 'unrated'];
+  var saveBar = document.getElementById('saveBar');
+  var moveBar = document.getElementById('moveBar');
+  var heldName = document.getElementById('heldName');
+  var searchBox = document.getElementById('searchBox');
+  var foundCount = document.getElementById('foundCount');
+  var counter = document.getElementById('unratedCount');
+  var hint = document.getElementById('hint');
+
+  function rows(list) {
+    return Array.prototype.filter.call(list.children, function (node) {
+      return node.dataset.id;
     });
   }
 
-  function renumber() {
-    var now = ids();
-    var changed = now.join(',') !== original.join(',');
-    bar.hidden = !changed;
-    field.value = now.join(',');
+  function ids(list) {
+    return rows(list).map(function (li) { return li.dataset.id; });
   }
 
-  // Arrow buttons: the reliable path on touch screens and with a keyboard.
-  list.addEventListener('click', function (event) {
-    var button = event.target.closest('.move');
-    if (!button) return;
-    var li = button.closest('li');
-    var dir = parseInt(button.dataset.dir, 10);
-    if (dir < 0 && li.previousElementSibling) {
-      list.insertBefore(li, li.previousElementSibling);
-    } else if (dir > 0 && li.nextElementSibling) {
-      list.insertBefore(li.nextElementSibling, li);
+  function snapshot() {
+    var parts = order.map(function (key) {
+      return key + ':' + ids(lists[key]).join(',');
+    });
+    rows(lists.ranked).forEach(function (li) {
+      parts.push(li.dataset.id + '=' + li.querySelector('.score').value);
+    });
+    return parts.join('|');
+  }
+
+  var original = snapshot();
+
+  // --- scores ------------------------------------------------------------
+
+  function scoreOf(li) {
+    if (!li || !li.dataset.id) return null;
+    var value = parseInt(li.querySelector('.score').value, 10);
+    return isNaN(value) ? null : value;
+  }
+
+  function clamp(value) { return Math.max(1, Math.min(100, value)); }
+
+  // The score a meal gets for landing where it was put: halfway between the
+  // rated meals above and below, which is what the server works out too.
+  function derive(li) {
+    var above = null, below = null, node;
+    for (node = li.previousElementSibling; node; node = node.previousElementSibling) {
+      above = scoreOf(node);
+      if (above !== null) break;
     }
-    renumber();
-    button.focus();
+    for (node = li.nextElementSibling; node; node = node.nextElementSibling) {
+      below = scoreOf(node);
+      if (below !== null) break;
+    }
+    if (above === null && below === null) return 50;
+    if (above === null) return clamp(below + 5);
+    if (below === null) return clamp(above - 5);
+    if (above - below <= 1) return below;
+    return clamp(Math.floor((above + below) / 2));
+  }
+
+  // A row carries a number only while it is in the ranking. Out of it the
+  // number means nothing, so it is cleared rather than left to mislead.
+  function dress(li) {
+    var input = li.querySelector('.score');
+    var button = li.querySelector('.excl');
+    var role = li.parentNode.dataset.role;
+    if (role === 'ranked') {
+      input.hidden = false;
+      if (input.value === '') input.value = derive(li);
+      li.classList.remove('is-out');
+      button.dataset.to = 'rejected';
+      button.innerHTML = '&times;';
+      button.title = 'Nikoli te jedi';
+      button.classList.remove('back');
+    } else {
+      input.hidden = true;
+      input.value = '';
+      li.classList.toggle('is-out', role === 'rejected');
+      button.dataset.to = role === 'rejected' ? 'unrated' : 'rejected';
+      button.innerHTML = role === 'rejected' ? '&#8617;' : '&times;';
+      button.title = role === 'rejected' ? 'Nazaj med neocenjene' : 'Nikoli te jedi';
+      button.classList.toggle('back', role === 'rejected');
+    }
+  }
+
+  function sync() {
+    order.forEach(function (key) {
+      fields[key].value = ids(lists[key]).join(',');
+      lists[key].classList.toggle('is-empty', rows(lists[key]).length === 0);
+    });
+    var scores = {};
+    rows(lists.ranked).forEach(function (li, index) {
+      // Written in rather than counted in CSS: a filtered-out row would make
+      // a CSS counter renumber, and the position shown has to be the real one.
+      li.querySelector('.pos').textContent = index + 1;
+      var value = scoreOf(li);
+      if (value !== null) scores[li.dataset.id] = value;
+    });
+    document.getElementById('scoresField').value = JSON.stringify(scores);
+    if (counter) counter.textContent = rows(lists.unrated).length;
+    saveBar.hidden = held !== null || snapshot() === original;
+  }
+
+  function moveTo(li, role) {
+    lists[role].appendChild(li);
+    dress(li);
+    sync();
+  }
+
+  // Typing a number re-slots the row where that number belongs, so the list
+  // never shows an order its own figures contradict. On a small screen this is
+  // also the quickest way to move a meal a long way.
+  function resort(li) {
+    var target = clamp(parseInt(li.querySelector('.score').value, 10));
+    var before = null;
+    var others = rows(lists.ranked).filter(function (other) { return other !== li; });
+    for (var i = 0; i < others.length; i++) {
+      var other = scoreOf(others[i]);
+      if (other !== null && other < target) { before = others[i]; break; }
+    }
+    lists.ranked.insertBefore(li, before);
+  }
+
+  form.addEventListener('change', function (event) {
+    var input = event.target.closest('.score');
+    if (!input) return;
+    var li = input.closest('li');
+    if (li.parentNode !== lists.ranked) return;
+    var value = parseInt(input.value, 10);
+    input.value = isNaN(value) ? derive(li) : clamp(value);
+    resort(li);
+    sync();
   });
 
-  // Pointer dragging: one code path for mouse, pen and touch. The two buttons
-  // living inside a row must not start a drag, or they can never be pressed.
-  var dragging = null;
-  list.addEventListener('pointerdown', function (event) {
-    if (event.target.closest('.move') || event.target.closest('.excl')) return;
-    var li = event.target.closest('li');
-    if (!li) return;
-    dragging = li;
-    li.classList.add('dragging');
-    li.setPointerCapture(event.pointerId);
+  // --- lift and place ----------------------------------------------------
+  //
+  // How this list is meant to be used, and the only way that works on a phone:
+  // tap the handle to pick a meal up, then tap the gap it goes in. Nothing is
+  // held down, so the page still scrolls and the search box still works while
+  // a meal is in hand.
+
+  var held = null;
+
+  function gap(list, beforeId) {
+    var li = document.createElement('li');
+    li.className = 'drop-here';
+    li.dataset.list = list.dataset.role;
+    li.dataset.before = beforeId || '';
+    li.innerHTML = '<span>sem</span>';
+    return li;
+  }
+
+  function openGaps() {
+    order.forEach(function (key) {
+      var list = lists[key];
+      rows(list).forEach(function (li) {
+        list.insertBefore(gap(list, li.dataset.id), li);
+      });
+      list.appendChild(gap(list, ''));
+    });
+  }
+
+  function closeGaps() {
+    Array.prototype.forEach.call(
+      form.querySelectorAll('.drop-here'),
+      function (node) { node.parentNode.removeChild(node); }
+    );
+  }
+
+  function startMove(li) {
+    if (held) endMove();
+    held = li;
+    li.classList.add('held');
+    heldName.textContent = li.querySelector('.name').textContent.trim();
+    moveBar.hidden = false;
+    hint.hidden = true;
+    openGaps();
+    applyFilter();
+    sync();
+  }
+
+  function endMove() {
+    if (!held) return;
+    held.classList.remove('held');
+    held = null;
+    moveBar.hidden = true;
+    hint.hidden = false;
+    closeGaps();
+    applyFilter();
+  }
+
+  function land(moved) {
+    endMove();
+    dress(moved);
+    sync();
+    moved.classList.add('landed');
+    setTimeout(function () { moved.classList.remove('landed'); }, 900);
+  }
+
+  function place(target) {
+    var list = lists[target.dataset.list];
+    var beforeId = target.dataset.before;
+    var reference = null;
+    if (beforeId) {
+      reference = rows(list).filter(function (li) {
+        return li.dataset.id === beforeId;
+      })[0] || null;
+    }
+    var moved = held;
+    list.insertBefore(moved, reference);
+    land(moved);
+  }
+
+  form.addEventListener('click', function (event) {
+    var target = event.target.closest('.drop-here');
+    if (target && held) { event.preventDefault(); place(target); return; }
+
+    var reject = event.target.closest('.excl');
+    if (reject) {
+      event.preventDefault();
+      if (held) endMove();
+      moveTo(reject.closest('li'), reject.dataset.to);
+      return;
+    }
+
+    // A handle pressed and released without travelling is a tap, and a tap
+    // lifts the meal. One control, both gestures.
+    var grip = event.target.closest('.grip');
+    if (grip) {
+      event.preventDefault();
+      var li = grip.closest('li');
+      if (held === li) endMove(); else startMove(li);
+    }
   });
 
-  list.addEventListener('pointermove', function (event) {
+  moveBar.addEventListener('click', function (event) {
+    var button = event.target.closest('button');
+    if (!button || !held) return;
+    event.preventDefault();
+    if (button.id === 'cancelMove') { endMove(); return; }
+    var moved = held;
+    if (button.dataset.jump === 'top') {
+      lists.ranked.insertBefore(moved, lists.ranked.firstChild);
+    } else {
+      lists.ranked.appendChild(moved);
+    }
+    land(moved);
+  });
+
+  // --- dragging, for a nudge with a mouse --------------------------------
+  //
+  // Only the handle starts a drag, and only the handle opts out of touch
+  // scrolling. Everywhere else the list scrolls the way a list should, which
+  // is what made this unusable on a phone before.
+
+  var candidate = null, dragging = null, startX = 0, startY = 0, lastY = 0;
+  var THRESHOLD = 6;
+  var scrolling = null;
+
+  function autoScrollStep() {
+    if (!dragging) { scrolling = null; return; }
+    var margin = 90;
+    var height = window.innerHeight;
+    if (lastY < margin) window.scrollBy(0, -Math.ceil((margin - lastY) / 5));
+    else if (lastY > height - margin) {
+      window.scrollBy(0, Math.ceil((lastY - (height - margin)) / 5));
+    }
+    scrolling = requestAnimationFrame(autoScrollStep);
+  }
+
+  form.addEventListener('pointerdown', function (event) {
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    var grip = event.target.closest('.grip');
+    if (!grip) return;
+    candidate = grip.closest('li');
+    startX = event.clientX;
+    startY = event.clientY;
+  });
+
+  document.addEventListener('pointermove', function (event) {
+    if (!dragging && candidate) {
+      if (Math.abs(event.clientX - startX) < THRESHOLD &&
+          Math.abs(event.clientY - startY) < THRESHOLD) return;
+      if (held) endMove();
+      dragging = candidate;
+      dragging.classList.add('dragging');
+      // Out of the way of elementFromPoint, and of the selection a mouse drag
+      // would otherwise paint down the page.
+      dragging.style.pointerEvents = 'none';
+      document.body.classList.add('dragging-row');
+      scrolling = requestAnimationFrame(autoScrollStep);
+    }
     if (!dragging) return;
     event.preventDefault();
+    lastY = event.clientY;
+
     var under = document.elementFromPoint(event.clientX, event.clientY);
-    var target = under && under.closest ? under.closest('li') : null;
-    if (!target || target === dragging || target.parentNode !== list) return;
-    var box = target.getBoundingClientRect();
-    var below = event.clientY > box.top + box.height / 2;
-    list.insertBefore(dragging, below ? target.nextSibling : target);
+    if (!under || !under.closest) return;
+    var over = under.closest('li[data-id]');
+    if (over && over.parentNode.classList.contains('dnd') && !over.hidden) {
+      var box = over.getBoundingClientRect();
+      var below = event.clientY > box.top + box.height / 2;
+      over.parentNode.insertBefore(dragging, below ? over.nextSibling : over);
+      return;
+    }
+    var list = under.closest('ol.dnd');
+    if (list && list !== dragging.parentNode) list.appendChild(dragging);
   });
 
   function endDrag() {
+    candidate = null;
     if (!dragging) return;
+    if (scrolling) { cancelAnimationFrame(scrolling); scrolling = null; }
     dragging.classList.remove('dragging');
+    dragging.style.pointerEvents = '';
+    document.body.classList.remove('dragging-row');
+    dress(dragging);
     dragging = null;
-    renumber();
+    sync();
   }
-  list.addEventListener('pointerup', endDrag);
-  list.addEventListener('pointercancel', endDrag);
 
-  // A submit must always carry the current order -- except the × button, which
-  // posts to a different action and only needs its own meal_id.
-  form.addEventListener('submit', function (event) {
-    if (event.submitter && event.submitter.classList.contains('excl')) return;
-    field.value = ids().join(',');
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+
+  // Keyboard: the handle is a real button, so a focused row moves one place
+  // with the arrow keys and no pointer at all.
+  form.addEventListener('keydown', function (event) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    var grip = event.target.closest('.grip');
+    if (!grip) return;
+    var li = grip.closest('li');
+    event.preventDefault();
+    if (held) endMove();
+    var sibling = event.key === 'ArrowUp'
+      ? li.previousElementSibling : li.nextElementSibling;
+    if (!sibling || !sibling.dataset.id) return;
+    if (event.key === 'ArrowUp') li.parentNode.insertBefore(li, sibling);
+    else li.parentNode.insertBefore(sibling, li);
+    dress(li);
+    sync();
+    grip.focus();
   });
+
+  // --- search ------------------------------------------------------------
+  //
+  // With a hundred dishes, finding one is most of the work. Lift a meal, search
+  // for where it belongs, tap the gap: a long move without a long drag.
+
+  function applyFilter() {
+    var query = (searchBox.value || '').trim().toLowerCase();
+    var shown = 0;
+    order.forEach(function (key) {
+      rows(lists[key]).forEach(function (li) {
+        var match = !query || li.dataset.name.indexOf(query) !== -1;
+        li.hidden = !match;
+        if (match) shown += 1;
+      });
+      // A gap beside a hidden row cannot be aimed at, so it hides with the row.
+      Array.prototype.forEach.call(
+        lists[key].querySelectorAll('.drop-here'),
+        function (node) {
+          var next = node.nextElementSibling;
+          node.hidden = !!query && !!next && next.hidden;
+        }
+      );
+    });
+    form.classList.toggle('filtered', !!query);
+    foundCount.hidden = !query;
+    foundCount.textContent = shown + (shown === 1 ? ' zadetek' : ' zadetkov');
+  }
+
+  // The nav is sticky too, and its height changes with the screen, so the
+  // search bar is told where to stop rather than guessing.
+  var nav = document.querySelector('nav');
+  function setNavOffset() {
+    document.documentElement.style.setProperty(
+      '--nav-h', (nav ? nav.offsetHeight : 0) + 'px');
+  }
+  setNavOffset();
+  window.addEventListener('resize', setNavOffset);
+
+  searchBox.addEventListener('input', applyFilter);
+  searchBox.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { searchBox.value = ''; applyFilter(); }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && held) endMove();
+  });
+
+  form.addEventListener('submit', function () { endMove(); sync(); });
+  applyFilter();
+  sync();
 })();
 </script>
 {% endblock %}

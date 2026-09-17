@@ -14,6 +14,11 @@ where you put it and later re-sorts leave it alone.
 New dishes appear each month. They slot into the list at the position their
 score implies, flagged until you have looked at them, so keeping up is a few
 slider screens rather than starting over.
+
+The meal page shows all of this as one board: the order, the rejected pile
+below it, and everything still without an opinion beside it. Dragging a dish
+from the last of those into the order rates it, at the score its new
+neighbours imply. `apply_board` is what the page posts back to.
 """
 
 from __future__ import annotations
@@ -199,6 +204,133 @@ def set_manual_order(user_id, ordered_ids):
         )
     db.execute("UPDATE rating SET acknowledged = 1 WHERE user_id = ?", (user_id,))
     return seen
+
+
+def _slot_between(above, below):
+    """A score for a meal dropped between two others.
+
+    `above` is the score of the nearest rated meal higher up the list, `below`
+    the nearest one further down; either may be None at the ends. Landing a
+    meal on the score halfway between its neighbours is what dragging an
+    unrated dish into the list is meant to mean.
+    """
+    if above is None and below is None:
+        return (MIN_SCORE + MAX_SCORE) // 2
+    if above is None:
+        return min(MAX_SCORE, below + 5)
+    if below is None:
+        return max(MIN_SCORE, above - 5)
+    if above - below <= 1:
+        # No room between them. Tying with the one below is harmless: scores
+        # this close are inside TIE_WINDOW anyway, and the saved order decides.
+        return below
+    return max(MIN_SCORE, min(MAX_SCORE, (above + below) // 2))
+
+
+def apply_board(user_id, ordered_ids, rejected_ids, unrated_ids, scores=None):
+    """Save the whole list at once, as the meal page posts it.
+
+    The page keeps its three columns in the browser and sends all of them, so
+    this is the single place where they are reconciled: `ordered_ids` is the
+    ranking top down, `rejected_ids` the pile below the cut line, and
+    `unrated_ids` the meals set aside with no opinion yet. `scores` carries
+    only the numbers that were typed in.
+
+    A meal that arrives in the order without a score is given one derived from
+    its neighbours, which is what dragging an unrated dish into place means.
+    """
+    scores = scores or {}
+    known = db.load_meals()
+
+    def clean(ids, taken):
+        out = []
+        for raw in ids or ():
+            meal_id = db.canonical_meal_id(raw)
+            if meal_id in known and meal_id not in taken:
+                taken.add(meal_id)
+                out.append(meal_id)
+        return out
+
+    taken = set()
+    ordered = clean(ordered_ids, taken)
+    rejected = clean(rejected_ids, taken)
+    unrated = clean(unrated_ids, taken)
+
+    # An empty post would wipe everything. That is never what the page means,
+    # so treat it as nothing to do.
+    if not (ordered or rejected or unrated):
+        return []
+
+    stamp = db.now()
+    current = get_ratings(user_id)
+
+    for meal_id in rejected:
+        db.execute(
+            "INSERT OR IGNORE INTO exclusion (user_id, meal_id, created_at) "
+            "VALUES (?, ?, ?)",
+            (user_id, meal_id, stamp),
+        )
+        db.execute(
+            "DELETE FROM rating WHERE user_id = ? AND meal_id = ?", (user_id, meal_id)
+        )
+
+    for meal_id in unrated:
+        db.execute(
+            "DELETE FROM exclusion WHERE user_id = ? AND meal_id = ?", (user_id, meal_id)
+        )
+        db.execute(
+            "DELETE FROM rating WHERE user_id = ? AND meal_id = ?", (user_id, meal_id)
+        )
+
+    for meal_id in ordered:
+        db.execute(
+            "DELETE FROM exclusion WHERE user_id = ? AND meal_id = ?", (user_id, meal_id)
+        )
+
+    # Typed numbers win, stored ones are kept, and whatever is left is worked
+    # out from the neighbours it was dropped between.
+    final = {}
+    for meal_id in ordered:
+        raw = scores.get(meal_id)
+        if raw is None and meal_id in current:
+            final[meal_id] = current[meal_id]
+            continue
+        try:
+            final[meal_id] = max(MIN_SCORE, min(MAX_SCORE, int(raw)))
+        except (TypeError, ValueError):
+            pass
+
+    for index, meal_id in enumerate(ordered):
+        if meal_id in final:
+            continue
+        above = next(
+            (final[m] for m in reversed(ordered[:index]) if m in final), None
+        )
+        below = next((final[m] for m in ordered[index + 1:] if m in final), None)
+        final[meal_id] = _slot_between(above, below)
+
+    for meal_id in ordered:
+        db.execute(
+            """INSERT INTO rating (user_id, meal_id, score, acknowledged,
+                                   created_at, updated_at)
+               VALUES (?, ?, ?, 1, ?, ?)
+               ON CONFLICT(user_id, meal_id) DO UPDATE SET
+                 score = excluded.score,
+                 acknowledged = 1,
+                 updated_at = excluded.updated_at""",
+            (user_id, meal_id, final[meal_id], stamp, stamp),
+        )
+
+    # Every place on this list was arranged by hand, so every place is pinned.
+    # Meals rated later slot in by score around them.
+    db.execute("DELETE FROM ranking WHERE user_id = ?", (user_id,))
+    for position, meal_id in enumerate(ordered):
+        db.execute(
+            """INSERT INTO ranking (user_id, meal_id, position, pinned, updated_at)
+               VALUES (?, ?, ?, 1, ?)""",
+            (user_id, meal_id, position, stamp),
+        )
+    return ordered
 
 
 def acknowledge_new(user_id):

@@ -360,3 +360,106 @@ def test_onboarding_is_marked_once_rating_has_happened(user):
     meals = add_meals(2)
     rate_all(user, meals, 50)
     assert ranking.mark_onboarded(user) is True
+
+
+# --- the whole board at once ---------------------------------------------
+#
+# The meal page keeps its three columns in the browser and posts all of them
+# together, so one call has to reconcile the order, the rejected pile and the
+# meals still waiting for an opinion.
+
+
+def test_the_board_saves_the_order_it_was_given(user):
+    meals = add_meals(4)
+    for meal, score in zip(meals, [90, 80, 70, 60]):
+        ranking.save_rating(user, meal, score)
+
+    wanted = [meals[2], meals[0], meals[3], meals[1]]
+    ranking.apply_board(user, wanted, [], [])
+    assert ranking.current_ranking(user) == wanted
+
+
+def test_a_typed_score_is_kept_as_typed(user):
+    meals = add_meals(3)
+    rate_all(user, meals, 50)
+    ranking.apply_board(user, meals, [], [], {meals[1]: 97})
+    assert ranking.get_ratings(user)[meals[1]] == 97
+
+
+def test_a_typed_score_is_clamped_to_the_scale(user):
+    meals = add_meals(2)
+    rate_all(user, meals, 50)
+    ranking.apply_board(user, meals, [], [], {meals[0]: 500, meals[1]: -7})
+    scores = ranking.get_ratings(user)
+    assert scores[meals[0]] == ranking.MAX_SCORE
+    assert scores[meals[1]] == ranking.MIN_SCORE
+
+
+def test_a_meal_dragged_in_lands_between_its_neighbours(user):
+    """Dropping an unrated dish into the list is how it gets rated."""
+    meals = add_meals(3)
+    ranking.save_rating(user, meals[0], 90)
+    ranking.save_rating(user, meals[1], 70)
+    # meals[2] has never been rated; it is dropped between the other two.
+    ranking.apply_board(user, [meals[0], meals[2], meals[1]], [], [])
+    assert ranking.get_ratings(user)[meals[2]] == 80
+
+
+def test_a_meal_dragged_to_the_top_outscores_what_was_there(user):
+    meals = add_meals(2)
+    ranking.save_rating(user, meals[0], 40)
+    ranking.apply_board(user, [meals[1], meals[0]], [], [])
+    assert ranking.get_ratings(user)[meals[1]] > 40
+
+
+def test_the_board_rejects_and_restores_meals(user):
+    meals = add_meals(3)
+    rate_all(user, meals, 50)
+
+    ranking.apply_board(user, [meals[0]], [meals[1]], [meals[2]])
+    assert ranking.excluded_meals(user) == {meals[1]}
+    assert meals[2] not in ranking.get_ratings(user), "set aside, not rated"
+    assert ranking.current_ranking(user) == [meals[0]]
+
+    # Dragged back out of the rejected pile and into the order.
+    ranking.apply_board(user, [meals[0], meals[1]], [], [meals[2]])
+    assert ranking.excluded_meals(user) == set()
+    assert meals[1] in ranking.get_ratings(user)
+
+
+def test_the_board_ignores_an_empty_post(user):
+    """A form that arrives with nothing in it must not wipe the list."""
+    meals = add_meals(3)
+    rate_all(user, meals, 50)
+    before = ranking.current_ranking(user)
+    ranking.apply_board(user, [], [], [])
+    assert ranking.current_ranking(user) == before
+
+
+def test_the_board_ignores_unknown_and_repeated_ids(user):
+    meals = add_meals(2)
+    rate_all(user, meals, 50)
+    ranking.apply_board(user, [meals[0], "not-a-meal", meals[0], meals[1]], [], [])
+    assert ranking.current_ranking(user) == [meals[0], meals[1]]
+
+
+def test_a_meal_named_twice_keeps_only_its_first_column(user):
+    meals = add_meals(2)
+    rate_all(user, meals, 50)
+    ranking.apply_board(user, [meals[0], meals[1]], [meals[1]], [])
+    assert ranking.excluded_meals(user) == set(), "the order named it first"
+    assert ranking.current_ranking(user) == [meals[0], meals[1]]
+
+
+def test_the_board_pins_what_it_saves(user):
+    """A later arrival must not shuffle a list that was arranged by hand."""
+    meals = add_meals(3)
+    for meal, score in zip(meals, [90, 80, 70]):
+        ranking.save_rating(user, meal, score)
+    wanted = [meals[2], meals[1], meals[0]]
+    ranking.apply_board(user, wanted, [], [])
+
+    newcomer, = add_meals(1, prefix="later")
+    ranking.save_rating(user, newcomer, 85)
+    order = ranking.current_ranking(user)
+    assert [m for m in order if m in wanted] == wanted

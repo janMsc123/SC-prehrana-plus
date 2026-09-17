@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Prehrana Plus{% endblock %}
+{% set dnevi = ['Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja'] %}
 {% block content %}
 <h1>Živjo, {{ user.first_name or user.username }}</h1>
 
@@ -8,7 +9,7 @@
   <div class="card switch-card {{ 'on' if user.autopilot else 'off' }}">
     <div class="switch-text">
       <b>Samodejno naročanje</b>
-      <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno — nič se ne naroči.' }}</span>
+      <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno, nič se ne naroči.' }}</span>
     </div>
     <button class="switch {{ 'on' if user.autopilot else '' }}" type="submit"
             role="switch" aria-checked="{{ 'true' if user.autopilot else 'false' }}"
@@ -16,86 +17,189 @@
   </div>
 </form>
 
-<div class="stats">
-  <div class="stat"><b>{{ ranked_count }}</b><span>ocenjenih</span></div>
-  <div class="stat"><b>{{ unranked_count }}</b><span>za oceniti</span></div>
-  <div class="stat"><b>{{ day_count }}</b><span>zbranih dni</span></div>
-  {% if progress.new %}<div class="stat"><b>{{ progress.new }}</b><span>novih</span></div>{% endif %}
-</div>
-
-{# One card, one obvious next step -- whatever that is right now. #}
-<div class="card" style="margin-top:1rem">
+{# One card, one obvious next step, and the clock that says when it matters. #}
+<div class="card">
   {% if meal_count == 0 %}
     <p>Jedilnika še nisem prebral.</p>
     <form method="post" action="/run/collect" class="inline">
       <button class="btn" type="submit">Zberi jedilnik</button>
     </form>
-  {% elif unranked_count %}
-    <p><strong>{{ unranked_count }}</strong> jedi čaka na oceno.</p>
-    <a class="btn" href="/rank">{{ 'Nadaljuj' if in_progress else 'Začni' }}</a>
+  {% elif progress.to_rate %}
+    <p><strong>{{ progress.to_rate }}</strong> jedi čaka na oceno.</p>
+    <a class="btn" href="/rank">{{ 'Oceni nove jedi' if rated_anything else 'Oceni jedi' }}</a>
   {% elif progress.new %}
     <p><strong>{{ progress.new }}</strong> novih jedi je uvrščenih po oceni.</p>
-    <a class="btn" href="/meals">Preveri seznam</a>
+    <a class="btn" href="/meals">Preveri lestvico</a>
   {% else %}
     <p>Vse ocenjeno. Naročanje ve, kaj izbrati.</p>
-    <a class="btn" href="/week">Poglej ta teden</a>
+    <a class="btn" href="/meals">Uredi lestvico</a>
   {% endif %}
 
-  <div class="actions">
-    <form method="post" action="/run/collect" class="inline">
-      <button class="btn ghost" type="submit">Zberi zdaj</button>
-    </form>
-    <form method="post" action="/run/pick" class="inline">
-      <button class="btn ghost" type="submit">
-        {{ 'Naroči zdaj' if place_orders else 'Preračunaj' }}
-      </button>
-    </form>
+  {% if not user.autopilot %}
+  <div class="timer off">
+    <span class="timer-label">Nič se ne bo naročilo, dokler je stikalo izklopljeno.</span>
   </div>
+  {% elif next_pick_iso %}
+  <div class="timer" data-at="{{ next_pick_iso }}">
+    <span class="timer-label">Naslednje naročanje čez</span>
+    <b class="timer-value" id="countdown">·</b>
+    <span class="timer-when">{{ next_pick_label }}</span>
+  </div>
+  {% endif %}
 </div>
 
-{% if picks %}
-<h2>Zadnje izbire</h2>
-<ol class="ranked plain">
-  {% for pick in picks %}
-  <li>
-    <span class="name">{{ pick.order_date }}</span>
-    <span class="muted">{{ pick.slot_name or '' }}</span>
-    <span class="meta">
-      {% if pick.status == 'placed' %}<span class="tag ok">naročeno</span>
-      {% elif pick.status == 'already_correct' %}<span class="tag ok">že naročeno</span>
-      {% elif pick.status == 'dry_run' %}<span class="tag skip">izračun</span>
-      {% elif pick.status == 'failed' %}<span class="tag bad">napaka</span>
-      {% else %}<span class="tag skip">preskočeno</span>{% endif %}
-    </span>
-  </li>
-  {% endfor %}
-</ol>
+{# The days. One tab per date, one grid of slots per date, and the choice is
+   made by tapping a card: green is yours and stays yours, blue is the one the
+   ranking picked on its own. #}
+<h2>Kaj se naroči</h2>
+
+{% if archive_empty %}
+<div class="notice">
+  Arhiv jedilnika je še prazen. Zbiralnik teče vsak dan zjutraj, po prvem
+  zagonu se dnevi pojavijo tukaj.
+</div>
+{% elif not days %}
+<div class="card"><p>Za prihodnje dni v arhivu ni jedilnika.</p></div>
+{% else %}
+
+<div class="legend">
+  <span><span class="swatch pick"></span> tvoja izbira</span>
+  <span><span class="swatch auto"></span> samodejna</span>
+  <span><span class="swatch skip"></span> odjava</span>
+  {% if chosen_count %}<span class="muted">{{ chosen_count }} izbranih ročno</span>{% endif %}
+</div>
+
+<section class="board" id="board">
+  <div class="board-days" role="tablist" aria-label="Dnevi">
+    {% for day in days %}
+    <button type="button" class="day-tab{% if day.override %} has-pick{% elif day.skipped %} has-skip{% endif %}"
+            role="tab" aria-selected="false" data-date="{{ day.date }}">
+      <span class="dow">{{ dnevi[day.weekday] }}</span>
+      <span class="dnum">{{ day.date[8:10]|int }}.{{ day.date[5:7]|int }}.</span>
+      <span class="dot" aria-hidden="true"></span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class="board-main">
+    {% for day in days %}
+    <div class="board-panel" role="tabpanel" data-date="{{ day.date }}"
+         id="d-{{ day.date }}" hidden>
+      <p class="board-head">
+        {{ dnevi[day.weekday] }} {{ day.date[8:10]|int }}. {{ day.date[5:7]|int }}.
+        {% if day.location %}<span class="muted">· {{ day.location }}</span>{% endif %}
+      </p>
+
+      {% if day.override_stale %}
+      <p class="warn board-note">Prejšnja izbira ni več na jedilniku.</p>
+      {% endif %}
+
+      <form method="post" action="/override/set">
+        <input type="hidden" name="order_date" value="{{ day.date }}">
+        <div class="slot-grid">
+          {% for slot in day.slots %}
+          <button class="slot-card{% if slot.is_override %} picked{% elif slot.is_auto and not day.override and not day.skipped %} auto{% endif %}"
+                  type="submit" name="slot_menu_id" value="{{ slot.slot_menu_id }}"
+                  title="{{ slot.description }}">
+            <span class="slot-title">{{ slot.slot_name }}</span>
+            <span class="slot-desc">{{ slot.description }}</span>
+            <span class="slot-meta">
+              {%- if slot.excluded %}nikoli
+              {%- elif slot.is_fallback %}rezerva
+              {%- elif slot.position is none %}ni ocenjena
+              {%- else %}#{{ slot.position + 1 }}{% endif -%}
+            </span>
+          </button>
+          {% endfor %}
+
+          {# Saying no. The X spans the whole tile so it reads as a crossing
+             out rather than as one more thing on the menu. #}
+          <button class="slot-card skip{% if day.skipped %} picked{% endif %}"
+                  type="submit" name="slot_menu_id" value="{{ skip_value }}"
+                  title="Ta dan ne naroči ničesar">
+            <svg class="slot-x" viewBox="0 0 100 100" preserveAspectRatio="none"
+                 aria-hidden="true" focusable="false">
+              <line x1="0" y1="0" x2="100" y2="100" vector-effect="non-scaling-stroke"/>
+              <line x1="100" y1="0" x2="0" y2="100" vector-effect="non-scaling-stroke"/>
+            </svg>
+            {# Kept to two short labels: the X runs through the tile, so
+               anything longer would be read across a diagonal line. #}
+            <span class="slot-title">BREZ MALICE</span>
+            <span class="slot-meta">odjava</span>
+          </button>
+        </div>
+
+        {% if day.override or day.skipped %}
+        <button class="clear-pick" type="submit" formaction="/override/clear">
+          nazaj na samodejno
+        </button>
+        {% endif %}
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
 {% endif %}
 
-<details class="fold">
-  <summary>Opravila in račun</summary>
+<script>
+(function () {
+  // The countdown to the next ordering run. The server has already worked out
+  // when that is, in its own timezone; this only turns it into a distance.
+  var box = document.querySelector('.timer[data-at]');
+  var out = document.getElementById('countdown');
+  if (box && out) {
+    var target = new Date(box.dataset.at).getTime();
+    var tick = function () {
+      var left = target - Date.now();
+      if (!isFinite(left)) { out.textContent = '·'; return; }
+      if (left <= 0) { out.textContent = 'zdaj'; return; }
+      var total = Math.floor(left / 1000);
+      var days = Math.floor(total / 86400);
+      var hours = Math.floor(total % 86400 / 3600);
+      var minutes = Math.floor(total % 3600 / 60);
+      var seconds = total % 60;
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      var clock = pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+      out.textContent = days ? days + ' d ' + clock : clock;
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
 
-  {% if jobs %}
-  <table>
-    <tr><th>Opravilo</th><th>Kdaj</th><th>Izid</th></tr>
-    {% for job in jobs %}
-    <tr>
-      <td>{{ job.job }}</td>
-      <td class="muted">{{ job.started_at }}</td>
-      <td>{% if job.ok == 1 %}<span class="tag ok">ok</span>
-          {% elif job.ok == 0 %}<span class="tag bad">napaka</span>
-          {% else %}<span class="tag skip">teče</span>{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% endif %}
+  // The day board. Every day is in the page already, so switching is instant
+  // and needs no round trip; the address bar keeps the open day so a choice
+  // that posts and comes back reopens where you were.
+  var board = document.getElementById('board');
+  if (!board) return;
+  var tabs = board.querySelectorAll('.day-tab');
+  var panels = board.querySelectorAll('.board-panel');
 
-  <p class="muted" style="font-size:.85rem">
-    Tvoje šolsko geslo je shranjeno šifrirano, da lahko naročanje teče brez tebe.
-  </p>
-  <form method="post" action="/settings/forget-password" class="inline"
-        onsubmit="return confirm('Geslo bo izbrisano in samodejno naročanje se izklopi. Nadaljujem?')">
-    <button class="link" type="submit">Pozabi moje geslo</button>
-  </form>
-</details>
+  function show(dateString) {
+    var matched = false;
+    Array.prototype.forEach.call(panels, function (panel) {
+      var on = panel.dataset.date === dateString;
+      panel.hidden = !on;
+      matched = matched || on;
+    });
+    Array.prototype.forEach.call(tabs, function (tab) {
+      var on = tab.dataset.date === dateString;
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      tab.classList.toggle('current', on);
+    });
+    if (matched && history.replaceState) {
+      history.replaceState(null, '', '#d-' + dateString);
+    }
+    return matched;
+  }
+
+  Array.prototype.forEach.call(tabs, function (tab) {
+    tab.addEventListener('click', function () { show(tab.dataset.date); });
+  });
+
+  var wanted = (location.hash || '').replace('#d-', '');
+  if (!wanted || !show(wanted)) {
+    if (tabs.length) show(tabs[0].dataset.date);
+  }
+})();
+</script>
 {% endblock %}

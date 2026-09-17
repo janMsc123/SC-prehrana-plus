@@ -14,6 +14,9 @@ The rules that matter:
     fallback wins before an excluded dish ever could.
   * A dish nobody has ranked yet is not ordered on a guess. It is reported so
     it can be ranked, and the best *ranked* dish that day is used instead.
+  * A date signed off by hand is left alone entirely: not the ranking, not the
+    fallback, nothing. It is the only way to end a day without lunch, which is
+    why it has to be asked for explicitly.
   * The orderable window comes from the school's own get_order_days, not from
     arithmetic on today's date -- it already accounts for cutoffs, holidays and
     the five-day limit.
@@ -98,6 +101,8 @@ def plan(user_row, client, today=None):
             "considered": [],
             "overridden": False,
             "is_fallback": False,
+            "skipped_by_hand": False,
+            "existing_order_to_cancel": False,
         }
 
         if not slots:
@@ -119,10 +124,24 @@ def plan(user_row, client, today=None):
                 "excluded": meal_id in excluded,
             })
 
+        # Signed off this date by hand: order nothing at all, not even the
+        # fallback. This is the one instruction that beats the floor, so it is
+        # answered before anything is weighed.
+        override_row = chosen_by_hand.get(order_date)
+        if override_row is not None and overrides.is_skip(override_row["slot_menu_id"]):
+            decision["skipped_by_hand"] = True
+            decision["status"] = "skipped"
+            if existing_orders.get(order_date):
+                decision["existing_order_to_cancel"] = True
+                decision["detail"] = "odjava, umikam naročilo pri šoli"
+            else:
+                decision["detail"] = "odjava"
+            decisions.append(decision)
+            continue
+
         # A meal picked by hand for this date beats everything else: the
         # ranking, an exclusion, and a dish that was never rated. Choosing it
-        # on the calendar is a more specific instruction than any of those.
-        override_row = chosen_by_hand.get(order_date)
+        # on the board is a more specific instruction than any of those.
         best = None
         if override_row is not None:
             best = next(
@@ -168,6 +187,8 @@ def plan(user_row, client, today=None):
                 if decision["unranked"]
                 else "every dish on offer is excluded"
             )
+            if existing_orders.get(order_date):
+                decision["existing_order_to_cancel"] = True
             decisions.append(decision)
             continue
 
@@ -222,6 +243,60 @@ def _record(user_id, decision, status, detail):
     )
 
 
+def apply_override(user_row, order_date, dry_run=None):
+    """Push a hand-made choice for one date to school right away.
+
+    Called straight after the dashboard board writes an override (or clears
+    one back to automatic), so what stands at school matches what the board
+    now shows instead of waiting for the next scheduled run. `plan` already
+    reads the override back out of the database, so this is the same
+    resolution `pick_for_user` uses, just placed for one date instead of the
+    whole window.
+    """
+    dry_run = (not settings.place_orders) if dry_run is None else dry_run
+
+    password = collector.decrypt_password(user_row["password_enc"])
+    if not password:
+        raise MalcomatError("no stored password for {}".format(user_row["username"]))
+
+    with Client() as client:
+        client.login(user_row["username"], password)
+        decisions = plan(user_row, client, today=date.today())
+        decision = next(
+            (d for d in decisions if d["order_date"] == str(order_date)), None
+        )
+        if decision is None:
+            return decision
+
+        wants_cancel = decision.get("existing_order_to_cancel")
+        if decision["status"] != "to_order" and not wants_cancel:
+            return decision
+
+        if dry_run:
+            decision["status"] = "dry_run"
+            detail = (
+                "would cancel standing order" if wants_cancel
+                else "would order {}".format(decision["choice"]["slot_name"])
+            )
+            _record(user_row["id"], decision, "dry_run", detail)
+            return decision
+
+        if wants_cancel:
+            client.cancel_order(order_date)
+        else:
+            client.place_order(decision["choice"]["slot_menu_id"], order_date)
+
+    if wants_cancel:
+        decision["status"] = "canceled"
+        _record(user_row["id"], decision, "canceled",
+                "withdrew order standing at school")
+    else:
+        decision["status"] = "placed"
+        _record(user_row["id"], decision, "placed",
+                "ordered {}".format(decision["choice"]["slot_name"]))
+    return decision
+
+
 def pick_for_user(user_row, today=None, dry_run=None):
     """Plan and then place the orders."""
     dry_run = (not settings.place_orders) if dry_run is None else dry_run
@@ -236,32 +311,45 @@ def pick_for_user(user_row, today=None, dry_run=None):
         decisions = plan(user_row, client, today=today)
 
         for decision in decisions:
-            if decision["status"] != "to_order":
+            wants_cancel = decision.get("existing_order_to_cancel")
+            if decision["status"] != "to_order" and not wants_cancel:
                 _record(user_row["id"], decision, decision["status"], decision["detail"])
                 results.append(decision)
                 continue
 
             if dry_run:
-                _record(user_row["id"], decision, "dry_run",
-                        "would order {}".format(decision["choice"]["slot_name"]))
+                detail = (
+                    "would cancel standing order" if wants_cancel
+                    else "would order {}".format(decision["choice"]["slot_name"])
+                )
+                _record(user_row["id"], decision, "dry_run", detail)
                 decision["status"] = "dry_run"
                 results.append(decision)
                 continue
 
             try:
-                client.place_order(
-                    decision["choice"]["slot_menu_id"], decision["order_date"]
-                )
+                if wants_cancel:
+                    client.cancel_order(decision["order_date"])
+                else:
+                    client.place_order(
+                        decision["choice"]["slot_menu_id"], decision["order_date"]
+                    )
             except MalcomatError as exc:
-                log.warning("order failed %s %s: %s",
-                            user_row["username"], decision["order_date"], exc)
+                verb = "cancel" if wants_cancel else "order"
+                log.warning("%s failed %s %s: %s",
+                            verb, user_row["username"], decision["order_date"], exc)
                 decision["status"] = "failed"
                 decision["detail"] = str(exc)
                 _record(user_row["id"], decision, "failed", str(exc))
             else:
-                decision["status"] = "placed"
-                _record(user_row["id"], decision, "placed",
-                        "ordered {}".format(decision["choice"]["slot_name"]))
+                if wants_cancel:
+                    decision["status"] = "canceled"
+                    _record(user_row["id"], decision, "canceled",
+                            "withdrew order standing at school")
+                else:
+                    decision["status"] = "placed"
+                    _record(user_row["id"], decision, "placed",
+                            "ordered {}".format(decision["choice"]["slot_name"]))
             results.append(decision)
 
     return results

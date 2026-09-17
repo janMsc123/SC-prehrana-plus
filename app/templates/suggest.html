@@ -7,11 +7,11 @@
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 {% if sent is not none %}
   {% if sent %}
-  <div class="notice"><strong>Poslano.</strong> Hvala &mdash; res pomaga.</div>
+  <div class="notice"><strong>Poslano.</strong> Hvala, res pomaga.</div>
   {% else %}
   <div class="notice">
     <strong>Shranjeno.</strong> Trenutno ga ni bilo mogoče poslati naprej,
-    ampak ni izgubljen &mdash; shranjen je in bo poslan kasneje.
+    ampak ni izgubljen: shranjen je in bo poslan kasneje.
   </div>
   {% endif %}
 {% endif %}
@@ -23,7 +23,7 @@
     <button class="btn" type="submit" style="margin-top:.8rem">Pošlji</button>
   </form>
   <p class="muted" style="font-size:.8rem;margin-bottom:0">
-    Ni anonimno &mdash; pošlje se s tvojim imenom in razredom.
+    Ni anonimno, pošlje se s tvojim imenom in razredom.
   </p>
 </div>
 

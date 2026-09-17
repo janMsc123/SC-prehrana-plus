@@ -5,7 +5,7 @@ own OpenAPI description at /openapi.json, which is where these endpoints and
 their shapes come from. Authentication is a session cookie issued by
 /api/v1/auth/login.
 
-Only four endpoints are used:
+Only five endpoints are used:
 
     login             POST /api/v1/auth/login
     get_self          GET  /api/v1/user/get_self
@@ -13,9 +13,11 @@ Only four endpoints are used:
     get_order_days    GET  /api/v1/config/get_order_days    (read)
     get_user_orders   POST /api/v1/menu_order/get_user_orders (read)
     post_menu_order   POST /api/v1/menu_order/post_menu_order (WRITE)
+    cancel_menu_order POST /api/v1/menu_order/cancel_menu_order (WRITE)
 
-post_menu_order is the only call that changes anything at school. It lives
-behind an explicit flag so a collect-only deployment cannot reach it.
+post_menu_order and cancel_menu_order are the only calls that change anything
+at school. Both live behind the same explicit flag so a collect-only
+deployment cannot reach either.
 """
 
 from __future__ import annotations
@@ -156,6 +158,21 @@ class Client:
         if user_id:
             body["user_id"] = user_id
         return self._request("POST", "/api/v1/menu_order/post_menu_order", body)
+
+    def cancel_order(self, order_date, user_id=None):
+        """Withdraw whatever is ordered for one date. This changes data at school.
+
+        Guarded by PLACE_ORDERS like place_order, since it is the same kind of
+        write -- just the other direction.
+        """
+        if not settings.place_orders:
+            raise MalcomatError(
+                "refusing to cancel: PLACE_ORDERS is disabled in this deployment"
+            )
+        body = {"order_date": str(order_date)}
+        if user_id:
+            body["user_id"] = user_id
+        return self._request("POST", "/api/v1/menu_order/cancel_menu_order", body)
 
 
 def verify_credentials(username, password):
