@@ -102,6 +102,7 @@ def plan(user_row, client, today=None):
             "overridden": False,
             "is_fallback": False,
             "skipped_by_hand": False,
+            "existing_order_to_cancel": False,
         }
 
         if not slots:
@@ -130,13 +131,11 @@ def plan(user_row, client, today=None):
         if override_row is not None and overrides.is_skip(override_row["slot_menu_id"]):
             decision["skipped_by_hand"] = True
             decision["status"] = "skipped"
-            # An order already standing at school is not withdrawn by this: the
-            # app has no cancel call, so say so rather than imply it is undone.
-            decision["detail"] = (
-                "odjava, a naročilo pri šoli že stoji"
-                if existing_orders.get(order_date)
-                else "odjava"
-            )
+            if existing_orders.get(order_date):
+                decision["existing_order_to_cancel"] = True
+                decision["detail"] = "odjava, umikam naročilo pri šoli"
+            else:
+                decision["detail"] = "odjava"
             decisions.append(decision)
             continue
 
@@ -188,6 +187,8 @@ def plan(user_row, client, today=None):
                 if decision["unranked"]
                 else "every dish on offer is excluded"
             )
+            if existing_orders.get(order_date):
+                decision["existing_order_to_cancel"] = True
             decisions.append(decision)
             continue
 
@@ -264,20 +265,35 @@ def apply_override(user_row, order_date, dry_run=None):
         decision = next(
             (d for d in decisions if d["order_date"] == str(order_date)), None
         )
-        if decision is None or decision["status"] != "to_order":
+        if decision is None:
+            return decision
+
+        wants_cancel = decision.get("existing_order_to_cancel")
+        if decision["status"] != "to_order" and not wants_cancel:
             return decision
 
         if dry_run:
             decision["status"] = "dry_run"
-            _record(user_row["id"], decision, "dry_run",
-                    "would order {}".format(decision["choice"]["slot_name"]))
+            detail = (
+                "would cancel standing order" if wants_cancel
+                else "would order {}".format(decision["choice"]["slot_name"])
+            )
+            _record(user_row["id"], decision, "dry_run", detail)
             return decision
 
-        client.place_order(decision["choice"]["slot_menu_id"], order_date)
+        if wants_cancel:
+            client.cancel_order(order_date)
+        else:
+            client.place_order(decision["choice"]["slot_menu_id"], order_date)
 
-    decision["status"] = "placed"
-    _record(user_row["id"], decision, "placed",
-            "ordered {}".format(decision["choice"]["slot_name"]))
+    if wants_cancel:
+        decision["status"] = "canceled"
+        _record(user_row["id"], decision, "canceled",
+                "withdrew order standing at school")
+    else:
+        decision["status"] = "placed"
+        _record(user_row["id"], decision, "placed",
+                "ordered {}".format(decision["choice"]["slot_name"]))
     return decision
 
 
@@ -295,32 +311,45 @@ def pick_for_user(user_row, today=None, dry_run=None):
         decisions = plan(user_row, client, today=today)
 
         for decision in decisions:
-            if decision["status"] != "to_order":
+            wants_cancel = decision.get("existing_order_to_cancel")
+            if decision["status"] != "to_order" and not wants_cancel:
                 _record(user_row["id"], decision, decision["status"], decision["detail"])
                 results.append(decision)
                 continue
 
             if dry_run:
-                _record(user_row["id"], decision, "dry_run",
-                        "would order {}".format(decision["choice"]["slot_name"]))
+                detail = (
+                    "would cancel standing order" if wants_cancel
+                    else "would order {}".format(decision["choice"]["slot_name"])
+                )
+                _record(user_row["id"], decision, "dry_run", detail)
                 decision["status"] = "dry_run"
                 results.append(decision)
                 continue
 
             try:
-                client.place_order(
-                    decision["choice"]["slot_menu_id"], decision["order_date"]
-                )
+                if wants_cancel:
+                    client.cancel_order(decision["order_date"])
+                else:
+                    client.place_order(
+                        decision["choice"]["slot_menu_id"], decision["order_date"]
+                    )
             except MalcomatError as exc:
-                log.warning("order failed %s %s: %s",
-                            user_row["username"], decision["order_date"], exc)
+                verb = "cancel" if wants_cancel else "order"
+                log.warning("%s failed %s %s: %s",
+                            verb, user_row["username"], decision["order_date"], exc)
                 decision["status"] = "failed"
                 decision["detail"] = str(exc)
                 _record(user_row["id"], decision, "failed", str(exc))
             else:
-                decision["status"] = "placed"
-                _record(user_row["id"], decision, "placed",
-                        "ordered {}".format(decision["choice"]["slot_name"]))
+                if wants_cancel:
+                    decision["status"] = "canceled"
+                    _record(user_row["id"], decision, "canceled",
+                            "withdrew order standing at school")
+                else:
+                    decision["status"] = "placed"
+                    _record(user_row["id"], decision, "placed",
+                            "ordered {}".format(decision["choice"]["slot_name"]))
             results.append(decision)
 
     return results

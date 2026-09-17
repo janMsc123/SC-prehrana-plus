@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from app import db, overrides, picker, ranking
+from app import collector, db, overrides, picker, ranking
 
 
 @pytest.fixture
@@ -138,13 +138,29 @@ def test_calendar_flags_an_override_whose_slot_is_gone(user):
 
 
 class FakeClient:
-    """Stands in for the school's API: fixed order days, menu and orders."""
+    """Stands in for the school's API: fixed order days, menu and orders.
+
+    Also usable as the context manager `apply_override`/`pick_for_user` open
+    (`with Client() as client:`), so the same fake can stand in for a
+    monkeypatched `picker.Client` in tests that exercise those, not just
+    `plan`.
+    """
 
     def __init__(self, menus, order_days, orders=()):
         self._menus = menus
         self._order_days = order_days
         self._orders = list(orders)
         self.placed = []
+        self.cancelled = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def login(self, username, password):
+        return None
 
     def get_order_days(self):
         return self._order_days
@@ -157,6 +173,12 @@ class FakeClient:
 
     def place_order(self, slot_menu_id, order_date, user_id=None):
         self.placed.append((slot_menu_id, order_date))
+
+    def cancel_order(self, order_date, user_id=None):
+        self.cancelled.append(order_date)
+        for order in self._orders:
+            if order["order_date"] == str(order_date):
+                order["canceled"] = True
 
 
 def menu_row(menu_date, menu_id, name, description, sort_order=0):
@@ -460,8 +482,8 @@ def test_signing_off_still_reports_what_was_on_offer(user):
     assert len(decision["considered"]) == 1
 
 
-def test_signing_off_says_so_when_an_order_already_stands(user):
-    """There is no cancel call, so the detail must not imply one happened."""
+def test_signing_off_flags_an_order_already_standing_for_cancellation(user):
+    """plan() marks the standing order to be withdrawn rather than just noting it."""
     import datetime
 
     top = add_meal("PIZZA")
@@ -476,7 +498,35 @@ def test_signing_off_says_so_when_an_order_already_stands(user):
     decision = picker.plan(user, client, today=datetime.date(2026, 9, 9))[0]
 
     assert decision["status"] == "skipped"
-    assert "že stoji" in decision["detail"]
+    assert decision["existing_order_to_cancel"] is True
+
+
+def test_signing_off_after_ordering_actually_cancels_at_school(user, monkeypatch):
+    """The reported bug: an override applies instantly, but clearing back to a
+    skip left the standing order untouched. apply_override must now call
+    cancel_order for it.
+
+    apply_override always plans against date.today(), so the order date used
+    here is put far in the future rather than faking the clock.
+    """
+    monkeypatch.setattr(collector, "decrypt_password", lambda blob: "pw")
+
+    top = add_meal("PIZZA")
+    ranking.save_rating(user["id"], top, 95)
+    client = FakeClient(
+        menus=[menu_row("2099-01-10", "s1", "MALICA 1", "PIZZA", 0)],
+        order_days=[{"order_date": "2099-01-10", "location_id": "loc1"}],
+        orders=[{"order_date": "2099-01-10", "menu_id": "s1",
+                 "menu_name": "MALICA 1", "canceled": False}],
+    )
+    monkeypatch.setattr(picker, "Client", lambda *a, **k: client)
+    monkeypatch.setattr(picker.settings, "place_orders", True)
+
+    overrides.set_override(user["id"], "2099-01-10", overrides.SKIP, None)
+    decision = picker.apply_override(user, "2099-01-10")
+
+    assert client.cancelled == ["2099-01-10"]
+    assert decision["status"] == "canceled"
 
 
 def test_signing_off_applies_only_to_its_own_date(user):

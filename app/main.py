@@ -450,8 +450,7 @@ def override_set(
     user=Depends(require_user),
 ):
     overrides.set_override(user["id"], order_date, slot_menu_id, meal_id or None)
-    if not overrides.is_skip(slot_menu_id):
-        _apply_override_now(user, order_date)
+    _apply_override_now(user, order_date)
     return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
 
