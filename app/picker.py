@@ -87,6 +87,9 @@ def plan(user_row, client, today=None):
     chosen_by_hand = overrides.for_dates(user_row["id"], dates)
     known = collector._parsed_known_meals()
 
+    cooldown_days = settings.repeat_cooldown_days
+    last_chosen = ranking.recent_choices(user_row["id"], dates[0], cooldown_days)
+
     decisions = []
     for day in order_days:
         order_date = day["order_date"]
@@ -101,6 +104,7 @@ def plan(user_row, client, today=None):
             "considered": [],
             "overridden": False,
             "is_fallback": False,
+            "repeated": False,
             "skipped_by_hand": False,
             "existing_order_to_cancel": False,
         }
@@ -157,14 +161,17 @@ def plan(user_row, client, today=None):
                 decision["detail"] = "ročna izbira ni več na jedilniku"
 
         if best is None:
+            ranked = []
             for entry in decision["considered"]:
                 if entry["excluded"]:
                     continue
                 if entry["position"] is None:
                     decision["unranked"].append(entry["name"])
                     continue
-                if best is None or entry["position"] < best["position"]:
-                    best = entry
+                ranked.append(entry)
+
+            recent_ids = ranking.still_cooling_down(last_chosen, order_date, cooldown_days)
+            best, decision["repeated"] = ranking.best_avoiding_repeats(ranked, recent_ids)
 
         if best is None:
             # Nothing cleared the floor -- so take the floor. The fallback is
@@ -193,6 +200,7 @@ def plan(user_row, client, today=None):
             continue
 
         decision["choice"] = best
+        last_chosen[best["meal_id"]] = order_date
         stale_note = decision["detail"]  # set above if an override went missing
         already = existing_orders.get(order_date)
         if already and already.get("menu_id") == best["slot_menu_id"]:
@@ -212,6 +220,10 @@ def plan(user_row, client, today=None):
         elif decision["is_fallback"]:
             decision["detail"] = " · ".join(
                 p for p in ("rezerva", decision["detail"]) if p
+            )
+        elif decision["repeated"]:
+            decision["detail"] = " · ".join(
+                p for p in ("ponovitev, nič drugega sveže na voljo", decision["detail"]) if p
             )
         elif stale_note:
             decision["detail"] = " · ".join(

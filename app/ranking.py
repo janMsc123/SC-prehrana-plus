@@ -24,6 +24,7 @@ neighbours imply. `apply_board` is what the page posts back to.
 from __future__ import annotations
 
 import logging
+from datetime import date, timedelta
 
 from . import db
 
@@ -369,6 +370,60 @@ def close_to_neighbour(order, scores, window=TIE_WINDOW):
                     close.add(meal_id)
                     break
     return close
+
+
+# --- avoiding repeats ------------------------------------------------------
+
+
+def recent_choices(user_id, before_date, cooldown_days):
+    """{meal_id: last order_date} for dishes ordered shortly before `before_date`.
+
+    Looks at the `pick` table, not the ranking, because what matters for
+    variety is what actually got ordered -- a manual override counts exactly
+    as much as an auto-pick. Only real orders count (placed, a dry-run stand-in
+    for one, or a pick that matched what was already standing at school);
+    skipped and failed picks never put food on the table, so they do not cost
+    anything a cooldown.
+    """
+    if cooldown_days <= 0:
+        return {}
+    start = (date.fromisoformat(before_date) - timedelta(days=cooldown_days)).isoformat()
+    rows = db.query(
+        """SELECT meal_id, MAX(order_date) AS last_date FROM pick
+            WHERE user_id = ? AND meal_id IS NOT NULL
+              AND status IN ('placed', 'dry_run', 'already_correct')
+              AND order_date >= ? AND order_date < ?
+            GROUP BY meal_id""",
+        (user_id, start, before_date),
+    )
+    return {r["meal_id"]: r["last_date"] for r in rows}
+
+
+def still_cooling_down(last_chosen, order_date, cooldown_days):
+    """Meal ids from `last_chosen` still inside their cooldown on `order_date`."""
+    if cooldown_days <= 0 or not last_chosen:
+        return set()
+    order_dt = date.fromisoformat(order_date)
+    return {
+        meal_id for meal_id, last_date in last_chosen.items()
+        if (order_dt - date.fromisoformat(last_date)).days < cooldown_days
+    }
+
+
+def best_avoiding_repeats(candidates, recent_ids):
+    """The best-ranked candidate that was not recently chosen.
+
+    `candidates` are dicts with "meal_id" and "position" (lower is better).
+    Repeating is a last resort: worth it to beat the fallback, but only once
+    nothing fresh clears the floor that day. Returns `(entry, repeated)`.
+    """
+    candidates = list(candidates)
+    fresh = [c for c in candidates if c["meal_id"] not in recent_ids]
+    if fresh:
+        return min(fresh, key=lambda c: c["position"]), False
+    if candidates:
+        return min(candidates, key=lambda c: c["position"]), True
+    return None, False
 
 
 # --- what to ask next ----------------------------------------------------
