@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, collector, db, fallback, overrides, picker, ranking, suggestions
+from . import auth, collector, db, fallback, identity, overrides, picker, ranking, suggestions
 from .config import settings
 from .malcomat import AuthError, MalcomatError
 
@@ -127,17 +127,47 @@ async def redirect_on_auth(request: Request, exc: HTTPException):
     )
 
 
+def _distinguish(meal_id, head, extras):
+    """Tell two meals apart that share the same headline dish.
+
+    identity.py deliberately keeps "CEVAPCICI + bombeta" and "CEVAPCICI +
+    rice" as separate meals rather than guessing they are the same -- see its
+    docstring. But showing both as plain "CEVAPCICI" in the rating list and
+    the board makes them look like the exact same row twice, which reads as a
+    bug even though the two really are different orders. Naming whichever
+    side actually differs fixes the display without touching the matching
+    rules that keep the two records apart in the first place.
+    """
+    if head == "(unnamed)":
+        return head
+    clash = db.query_one(
+        """SELECT 1 FROM meal
+            WHERE head = ? AND id != ?
+              AND id NOT IN (SELECT meal_id FROM meal_alias)
+            LIMIT 1""",
+        (head, meal_id),
+    )
+    if clash is None:
+        return head
+    detail = next((e for e in extras if e not in identity.FILLER), None)
+    if detail is None:
+        detail = extras[0] if extras else None
+    return "{} · {}".format(head, detail) if detail else head
+
+
 def meal_view(meal_id):
     """A meal shaped for display, or None if it has gone away."""
     row = db.query_one("SELECT * FROM meal WHERE id = ?", (db.canonical_meal_id(meal_id),))
     if row is None:
         return None
     components = db.components_of(row)
+    head = row["head"] or "(unnamed)"
+    extras = [c for c in components if c != row["head"]]
     return {
         "id": row["id"],
-        "name": row["head"] or "(unnamed)",
+        "name": _distinguish(row["id"], head, extras),
         "components": components,
-        "extras": [c for c in components if c != row["head"]],
+        "extras": extras,
         "description": row["sample_description"],
         "times_seen": row["times_seen"],
         "first_seen": row["first_seen_date"],
