@@ -52,13 +52,6 @@ class Settings:
             "FALLBACK_SLOT_NAME", "MALICA 7"
         ).strip()
 
-        # How many days a dish stays "too recently ordered" to be auto-picked
-        # again, once something else clears the floor. Without this, a single
-        # favourite that keeps reappearing on the menu (hot dog, cevapcici...)
-        # wins every single day it is offered, since the picker otherwise only
-        # looks at that one day's ranking. 0 disables the cooldown entirely.
-        self.repeat_cooldown_days = _int("REPEAT_COOLDOWN_DAYS", 5)
-
         # Who may answer the "is this the same dish?" questions. Merging two
         # meals rewrites the shared archive for everyone, so this is upkeep for
         # whoever runs the instance -- not something each classmate should be

@@ -26,7 +26,6 @@ from collections import OrderedDict
 from datetime import date, timedelta
 
 from . import db, ranking
-from .config import settings
 
 #: How far ahead the day board looks. The school publishes roughly three weeks,
 #: and the collector sweeps 28 days, so this matches what can actually be there.
@@ -101,22 +100,26 @@ def clear_past(user_id, today=None):
 # --- the day board -------------------------------------------------------
 
 
-def _auto_choice(slots, positions, excluded, recent_ids=None):
+def _auto_choice(slots, positions, excluded):
     """Which slot the picker would take on its own, or None.
 
     Mirrors the rule in picker.plan: best ranked position wins, exclusions and
-    unranked dishes are passed over, a dish ordered too recently (`recent_ids`)
-    is passed over too as long as something fresh still clears the floor, and
-    when nothing clears the floor the daily fallback is taken. Kept here so the
-    board shows the same answer the picker will reach, without a network call.
+    unranked dishes are passed over, and when nothing clears the floor the
+    daily fallback is taken. Kept here so the board shows the same answer
+    the picker will reach, without a network call.
     """
     from . import fallback
 
-    candidates = [
-        slot for slot in slots
-        if slot["meal_id"] not in excluded and positions.get(slot["meal_id"]) is not None
-    ]
-    best, _repeated = ranking.best_avoiding_repeats(candidates, recent_ids or set())
+    best = None
+    best_position = None
+    for slot in slots:
+        if slot["meal_id"] in excluded:
+            continue
+        position = positions.get(slot["meal_id"])
+        if position is None:
+            continue
+        if best is None or position < best_position:
+            best, best_position = slot, position
     if best is None:
         best = next(
             (s for s in slots if fallback.is_fallback_slot(s["slot_name"])), None
@@ -150,9 +153,6 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
     excluded = ranking.excluded_meals(user_row["id"])
     chosen = for_dates(user_row["id"])
 
-    cooldown_days = settings.repeat_cooldown_days
-    last_chosen = ranking.recent_choices(user_row["id"], str(today), cooldown_days)
-
     by_date = OrderedDict()
     for row in db.query(sql, tuple(params)):
         meal_id = db.canonical_meal_id(row["meal_id"])
@@ -176,19 +176,7 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
     for menu_date, slots in by_date.items():
         override_row = chosen.get(menu_date)
         override_slot = override_row["slot_menu_id"] if override_row else None
-        recent_ids = ranking.still_cooling_down(last_chosen, menu_date, cooldown_days)
-        auto = _auto_choice(slots, positions, excluded, recent_ids)
-
-        # Whatever the picker would actually order this date -- the override
-        # if there is one, else the auto pick -- counts against later dates'
-        # cooldown, the same way picker.plan folds a chosen date back in.
-        effective = auto
-        if override_slot and not is_skip(override_slot):
-            effective = next(
-                (s for s in slots if s["slot_menu_id"] == override_slot), auto
-            )
-        if effective is not None:
-            last_chosen[effective["meal_id"]] = menu_date
+        auto = _auto_choice(slots, positions, excluded)
 
         for slot in slots:
             slot["is_override"] = slot["slot_menu_id"] == override_slot
