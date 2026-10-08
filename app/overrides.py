@@ -41,8 +41,9 @@ def is_admin_name(username):
 def window_locked(username, order_date, now=None):
     """True if this user may not order/change `order_date` right now.
 
-    From 14:00 local time, non-admins are locked out of the same day and the
-    next day (hand picks and autopilot alike). Admins are never locked here.
+    The deadline for a day is 14:00 the day before. So today is locked all
+    day (it closed yesterday at 14:00), and from 14:00 tomorrow is locked
+    too. Past dates are locked. Admins are never locked here.
     """
     if is_admin_name(username):
         return False
@@ -51,10 +52,11 @@ def window_locked(username, order_date, now=None):
     except Exception:
         zone = ZoneInfo("UTC")
     now = now or datetime.now(zone)
-    if now.hour < ORDER_CLOSE_HOUR:
-        return False
     d = str(order_date)[:10]
-    return d in (str(now.date()), str(now.date() + timedelta(days=1)))
+    today = str(now.date())
+    if d <= today:
+        return True
+    return now.hour >= ORDER_CLOSE_HOUR and d == str(now.date() + timedelta(days=1))
 
 #: How far ahead the day board looks. The school publishes roughly three weeks,
 #: and the collector sweeps 28 days, so this matches what can actually be there.

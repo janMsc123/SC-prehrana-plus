@@ -326,8 +326,12 @@ def apply_override(user_row, order_date, dry_run=None):
     return decision
 
 
-def pick_for_user(user_row, today=None, dry_run=None):
-    """Plan and then place the orders."""
+def pick_for_user(user_row, today=None, dry_run=None, only_overrides=False):
+    """Plan and then place the orders.
+
+    `only_overrides` is for users with the autopilot off: only dates they
+    picked (or signed off) by hand are acted on, nothing is chosen for them.
+    """
     dry_run = (not settings.place_orders) if dry_run is None else dry_run
 
     password = collector.decrypt_password(user_row["password_enc"])
@@ -338,6 +342,10 @@ def pick_for_user(user_row, today=None, dry_run=None):
     with Client() as client:
         client.login(user_row["username"], password)
         decisions = plan(user_row, client, today=today)
+        if only_overrides:
+            by_hand = overrides.for_dates(
+                user_row["id"], [d["order_date"] for d in decisions])
+            decisions = [d for d in decisions if d["order_date"] in by_hand]
 
         for decision in decisions:
             wants_cancel = decision.get("existing_order_to_cancel")
@@ -397,11 +405,13 @@ def run(today=None, dry_run=None):
     errors = []
 
     users = db.query(
-        "SELECT * FROM app_user WHERE password_enc IS NOT NULL AND autopilot = 1"
+        "SELECT * FROM app_user WHERE password_enc IS NOT NULL"
     )
     for user in users:
         try:
-            for decision in pick_for_user(user, today=today, dry_run=dry_run):
+            for decision in pick_for_user(
+                    user, today=today, dry_run=dry_run,
+                    only_overrides=not user["autopilot"]):
                 totals[decision["status"]] += 1
         except (MalcomatError, AuthError) as exc:
             log.warning("pick failed for %s: %s", user["username"], exc)
