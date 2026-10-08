@@ -1,56 +1,79 @@
 {% extends "base.html" %}
-{% block title %}Kako deluje seznam &middot; Prehrana Plus{% endblock %}
+{% block title %}Kako deluje &middot; Prehrana Plus{% endblock %}
 {% block content %}
-<h1>Tri stvari o seznamu</h1>
+<header class="hero">
+  <span class="hero-mark" aria-hidden="true">P+</span>
+  <h1>Kako deluje</h1>
+  <p>Ti poveš, kaj ti je všeč. Prehrana Plus vsak dan naroči najboljše, kar je na jedilniku.</p>
+</header>
 
-<div class="card tutorial-step">
-  <span class="step-num">1</span>
-  <div>
-    <h2 style="margin-top:0">Jedi lahko premikaš</h2>
-    <p>Vrstni red določa, kaj se naroči. Tapni <strong>⠿</strong>, potem pa
-       tapni vrzel, kamor jed sodi.</p>
-    <div class="demo-list">
-      <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-score">88</span></div>
-      <div class="demo-gap">SEM</div>
-      <div class="demo-row dragging"><span class="demo-grip">⠿</span> PIZZA S ŠUNKO <span class="demo-score">84</span></div>
-      <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-score">72</span></div>
+<ol class="steps">
+  <li class="card step">
+    <span class="step-num">1</span>
+    <div class="step-body">
+      <h2>Lestvica določa, kaj se naroči</h2>
+      <p>Vsaka jed dobi oceno od 1 do 100. Višje kot je, prej se naroči.
+         Tapni <strong>⠿</strong>, potem pa tapni vrzel, kamor jed sodi.</p>
+      <div class="demo-list">
+        <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-score">88</span></div>
+        <div class="demo-gap">SEM</div>
+        <div class="demo-row dragging"><span class="demo-grip">⠿</span> PIZZA S ŠUNKO <span class="demo-score">84</span></div>
+        <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-score">72</span></div>
+      </div>
+      <p class="step-foot">Hitreje: vpiši oceno in jed skoči, kamor spada. <strong>×</strong> pomeni »tega nikoli«.</p>
     </div>
-    <p class="muted" style="font-size:.9rem;margin-bottom:0">
-      Med držanjem lahko seznam mirno drsaš ali poiščeš jed. Še hitreje: vpiši
-      oceno in jed skoči, kamor spada.</p>
-  </div>
-</div>
+  </li>
 
-<div class="card tutorial-step">
-  <span class="step-num">2</span>
-  <div>
-    <h2 style="margin-top:0">Rumeno pomeni &raquo;skoraj enako&laquo;</h2>
-    <p>Razlika <strong>{{ tie_window }} točki ali manj</strong>, vrstni red med njima je vseeno.</p>
-    <div class="demo-list">
-      <div class="demo-row close"><span class="demo-grip">⠿</span> TORTILJA PIŠČANČJA <span class="demo-score">78</span></div>
-      <div class="demo-row close"><span class="demo-grip">⠿</span> HOT DOG <span class="demo-score">77</span></div>
-      <div class="demo-row"><span class="demo-grip">⠿</span> RIČET S KLOBASO <span class="demo-score">61</span></div>
+  <li class="card step">
+    <span class="step-num">2</span>
+    <div class="step-body">
+      <h2>Rumeno pomeni »skoraj enako«</h2>
+      <p>Razlika <strong>{{ tie_window }} točki ali manj</strong>, vrstni red med njima je vseeno.</p>
+      <div class="demo-list">
+        <div class="demo-row close"><span class="demo-grip">⠿</span> TORTILJA PIŠČANČJA <span class="demo-score">78</span></div>
+        <div class="demo-row close"><span class="demo-grip">⠿</span> HOT DOG <span class="demo-score">77</span></div>
+        <div class="demo-row"><span class="demo-grip">⠿</span> RIČET S KLOBASO <span class="demo-score">61</span></div>
+      </div>
+      <p class="step-foot">Nove jedi se pojavijo same, z oznako <span class="tag new">NOVO</span>.</p>
     </div>
-    <p class="muted" style="font-size:.9rem;margin-bottom:0">Ni prav? Prestavi jo.</p>
-  </div>
-</div>
+  </li>
 
-<div class="card tutorial-step">
-  <span class="step-num">3</span>
-  <div>
-    <h2 style="margin-top:0">Nove jedi se pojavijo same</h2>
-    <p>Neocenjene čakajo v desnem stolpcu. Prestavi jed v lestvico in oceno
-       dobi sama, po sosedih. Nova jed dobi oznako <span class="tag new">NOVO</span>.</p>
-    <div class="demo-list">
-      <div class="demo-row"><span class="demo-grip">⠿</span> HAMBURGER <span class="demo-score">88</span></div>
-      <div class="demo-row is-new"><span class="demo-grip">⠿</span> NOVA JED <span class="tag new">NOVO</span> <span class="demo-score">84</span></div>
-      <div class="demo-row"><span class="demo-grip">⠿</span> MESNA LAZANJA <span class="demo-score">72</span></div>
+  <li class="card step">
+    <span class="step-num">3</span>
+    <div class="step-body">
+      <h2>Barve na Domov</h2>
+      <p>Kar je označeno kot naročeno, je prebrano iz šolskega sistema, zato se vedno ujema s šolo.</p>
+      <div class="demo-tiles">
+        <div class="demo-tile auto"><small>naročeno</small><b>MENI 3</b></div>
+        <div class="demo-tile auto pending"><small>bo naročeno</small><b>MENI 1</b></div>
+        <div class="demo-tile picked"><small>tvoja izbira</small><b>MENI 4</b></div>
+        <div class="demo-tile skip"><small>odjava</small><b>BREZ MALICE</b></div>
+      </div>
+      <p class="step-foot">Pikica ob dnevu pove isto: modra samodejno, zelena tvoja izbira,
+         rdeča odjava. Bleda pomeni, da se še ni zgodilo.</p>
     </div>
-    <p class="muted" style="font-size:.9rem;margin-bottom:0">Najdeš jih na vrhu <strong>Lestvice jedi</strong>.</p>
-  </div>
-</div>
+  </li>
 
+  <li class="card step">
+    <span class="step-num">4</span>
+    <div class="step-body">
+      <h2>Meniji</h2>
+      <p>V zavihku <a href="/menus">Meniji</a> izbereš, med čim se izbira:</p>
+      <ul class="tick-list">
+        <li><b>Po lestvici</b>: najboljše s tvoje lestvice, iz katerega koli menija.</li>
+        <li><b>Vegi</b>: vsak dan MENI 2.</li>
+        <li><b>Hladna malica</b>: MENI 5 ali 6, kateri je višje; sicer MENI 5.</li>
+        <li><b>Brez menija 7</b>: če ni nič z lestvice, se malica odjavi.</li>
+      </ul>
+    </div>
+  </li>
+</ol>
+
+{% if user.tutorial_seen_at %}
+<a class="btn big" href="/">Nazaj domov</a>
+{% else %}
 <form method="post" action="/tutorial/done">
   <button class="btn big" type="submit">Razumem</button>
 </form>
+{% endif %}
 {% endblock %}

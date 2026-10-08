@@ -1,13 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Predlogi &middot; Prehrana Plus{% endblock %}
 {% block content %}
-<h1>Imaš predlog?</h1>
-<p class="sub">Kaj manjka ali bi moralo delati drugače.</p>
+<header class="hero small">
+  <span class="hero-mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/></svg>
+  </span>
+  <h1>Imaš predlog?</h1>
+  <p>Kaj manjka ali bi moralo delati drugače. Vsak predlog prebere človek.</p>
+</header>
 
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 {% if sent is not none %}
   {% if sent %}
-  <div class="notice"><strong>Poslano.</strong> Hvala, res pomaga.</div>
+  <div class="notice ok-notice"><strong>Poslano.</strong> Hvala, res pomaga.</div>
   {% else %}
   <div class="notice">
     <strong>Shranjeno.</strong> Trenutno ga ni bilo mogoče poslati naprej,
@@ -16,29 +21,28 @@
   {% endif %}
 {% endif %}
 
-<div class="card">
+<div class="card suggest-card">
   <form method="post" action="/suggest">
+    <label class="field-label" for="body">Tvoj predlog</label>
     <textarea id="body" name="body" rows="5" maxlength="{{ max_length }}"
               placeholder="Npr.: rad bi videl, koliko me je malica stala ta mesec." required></textarea>
-    <button class="btn" type="submit" style="margin-top:.8rem">Pošlji</button>
+    <div class="suggest-foot">
+      <span class="muted small">Ni anonimno, pošlje se s tvojim imenom in razredom.</span>
+      <button class="btn" type="submit">Pošlji</button>
+    </div>
   </form>
-  <p class="muted" style="font-size:.8rem;margin-bottom:0">
-    Ni anonimno, pošlje se s tvojim imenom in razredom.
-  </p>
 </div>
 
 {% if mine %}
 <h2>Kar si že poslal</h2>
-<ol class="ranked plain">
+<ul class="sent-list">
   {% for s in mine %}
-  <li>
-    <span class="name" style="font-weight:400">{{ s.body }}</span>
-    <span class="meta">
-      {% if s.delivered %}<span class="tag ok">poslano</span>
-      {% else %}<span class="tag skip">v čakalni vrsti</span>{% endif %}
-    </span>
+  <li class="card">
+    <span class="sent-body">{{ s.body }}</span>
+    {% if s.delivered %}<span class="tag ok">poslano</span>
+    {% else %}<span class="tag skip">v čakalni vrsti</span>{% endif %}
   </li>
   {% endfor %}
-</ol>
+</ul>
 {% endif %}
 {% endblock %}

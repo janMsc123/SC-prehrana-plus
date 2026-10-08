@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Admin &middot; Prehrana Plus{% endblock %}
+{% macro bars(rows, unit='') %}
+<ul class="bars">
+  {% for r in rows %}
+  <li>
+    <span class="bar-label">{{ r.label }}</span>
+    <span class="bar-track"><span class="bar-fill" style="width: {{ r.pct }}%"></span></span>
+    <span class="bar-n">{{ r.n }}{{ unit }}</span>
+  </li>
+  {% else %}
+  <li class="muted">Ni podatkov.</li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<header class="page-head admin-head">
+  <div>
+    <h1>Admin</h1>
+    <p class="sub">Uporabniki, naročila in vse, kar se da prešteti. Za raziskovalno nalogo prenesi izvoz.</p>
+  </div>
+  <div class="head-actions">
+    <form method="post" action="/admin/sync"><button class="btn ghost small" type="submit">Osveži iz šole</button></form>
+    <a class="btn small" href="/admin/export.zip">Izvoz (anonimno)</a>
+    <a class="btn ghost small" href="/admin/export.zip?names=1">Izvoz z imeni</a>
+  </div>
+</header>
+
+<div class="tiles">
+  {% for t in overview.tiles %}
+  <div class="tile">
+    <span class="tile-value">{{ t.value }}</span>
+    <span class="tile-label">{{ t.label }}</span>
+    {% if t.hint %}<span class="tile-hint">{{ t.hint }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Uporabniki <span class="count">{{ users|length }}</span></h2>
+<div class="card table-card">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Ime</th><th>Razred</th><th>Meni</th><th>Samodejno</th>
+        <th class="num">Ocen</th><th class="num">Izloč.</th><th class="num">Ročno</th>
+        <th class="num">Naročil</th><th class="num">Prevzeto</th>
+        <th>Najljubša</th><th>Prijava</th><th>Šola</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td><b>{{ u.name }}</b><br><span class="muted small">{{ u.username }} · {{ u.pseudonym }}</span></td>
+        <td>{{ u.class_name }}</td>
+        <td>{{ u.plan }}{% if u.skip_floor %} <span class="tag bad">brez 7</span>{% endif %}</td>
+        <td>{% if u.autopilot %}<span class="tag ok">vklop</span>{% else %}<span class="tag skip">izklop</span>{% endif %}
+            {% if not u.has_password %}<span class="tag bad" title="Geslo ni shranjeno">brez gesla</span>{% endif %}</td>
+        <td class="num">{{ u.ratings }}</td>
+        <td class="num">{{ u.exclusions }}</td>
+        <td class="num">{{ u.overrides }}</td>
+        <td class="num">{{ u.orders }}</td>
+        <td class="num">{% if u.claim_rate is not none %}{{ u.claim_rate }} %<br><span class="muted small">{{ u.claimed }}/{{ u.orders_past }}</span>{% else %}–{% endif %}</td>
+        <td class="wrap">{{ u.top_meal }}</td>
+        <td>{{ u.last_login_at }}{% if u.active_7d %} <span class="live-dot" title="aktiven zadnjih 7 dni"></span>{% endif %}<br><span class="muted small">od {{ u.created_at }}</span></td>
+        <td>{% if u.sync_ok is none %}<span class="muted">–</span>
+            {% elif u.sync_ok %}<span class="tag ok" title="{{ u.sync_at }}">ok</span>
+            {% else %}<span class="tag bad" title="{{ u.sync_at }}">napaka</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="stat-grid">
+  <section class="card">
+    <h3>Naročila po menijih</h3>
+    {{ bars(overview.slots) }}
+  </section>
+  <section class="card">
+    <h3>Prevzem po menijih</h3>
+    <p class="muted small">Delež preteklih naročil, ki so bila res prevzeta.</p>
+    <ul class="bars">
+      {% for r in overview.pickup %}
+      <li>
+        <span class="bar-label">{{ r.label }}</span>
+        <span class="bar-track"><span class="bar-fill good" style="width: {{ r.pct }}%"></span></span>
+        <span class="bar-n">{% if r.n %}{{ r.pct }} %{% else %}–{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <h3>Načrti menijev</h3>
+    {{ bars(overview.plans) }}
+  </section>
+  <section class="card">
+    <h3>Razredi</h3>
+    {{ bars(overview.classes) }}
+  </section>
+  <section class="card">
+    <h3>Naročila po dnevih v tednu</h3>
+    {{ bars(overview.weekdays) }}
+  </section>
+  <section class="card">
+    <h3>Kako je bilo izbrano</h3>
+    {{ bars(overview.source) }}
+    <h3 class="sub-h">Izid naročanja</h3>
+    {{ bars(overview.picks) }}
+  </section>
+</div>
+
+<section class="card timeline-card">
+  <h3>Naročila na dan (zadnjih 6 tednov)</h3>
+  {% if overview.timeline %}
+  <div class="columns">
+    {% for r in overview.timeline %}
+    <div class="col" title="{{ r.label }}: {{ r.n }}">
+      <span class="col-n">{{ r.n }}</span>
+      <span class="col-bar" style="height: {{ r.pct }}%"></span>
+      <span class="col-label">{{ r.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="muted">Ni podatkov. Pritisni »Osveži iz šole«.</p>{% endif %}
+</section>
+
+<div class="stat-grid two">
+  <section class="card">
+    <h3>Najbolj priljubljene jedi</h3>
+    <p class="muted small">Povprečna ocena, vsaj 2 ocenjevalca.</p>
+    <table class="data compact">
+      <thead><tr><th>Jed</th><th class="num">Povp.</th><th class="num">Ocen</th><th class="num">X</th></tr></thead>
+      <tbody>
+        {% for m in popularity.liked %}
+        <tr><td class="wrap">{{ m.name }}</td><td class="num"><b>{{ m.avg }}</b></td><td class="num">{{ m.raters }}</td><td class="num">{{ m.excluded }}</td></tr>
+        {% else %}<tr><td colspan="4" class="muted">Ni podatkov.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h3>Najpogosteje izločene</h3>
+    <p class="muted small">Kolikokrat je kdo pritisnil X; odobritev = ocenjeno / (ocenjeno + X).</p>
+    <table class="data compact">
+      <thead><tr><th>Jed</th><th class="num">X</th><th class="num">Odobr.</th><th class="num">Povp.</th></tr></thead>
+      <tbody>
+        {% for m in popularity.disliked %}
+        <tr><td class="wrap">{{ m.name }}</td><td class="num"><b>{{ m.excluded }}</b></td><td class="num">{{ m.approval }} %</td><td class="num">{{ m.avg if m.avg is not none else '–' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="muted">Ni podatkov.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<div class="stat-grid two">
+  <section class="card">
+    <h3>Zadnja dejanja</h3>
+    <ul class="events">
+      {% for e in events %}
+      <li><span class="ev-time">{{ e.created_at[5:16].replace('T', ' ') }}</span>
+          <span class="ev-who">{{ e.username or '–' }}</span>
+          <span class="ev-kind">{{ e.kind }}</span>
+          {% if e.order_date %}<span class="muted">{{ e.order_date }}</span>{% endif %}</li>
+      {% else %}<li class="muted">Zgodovina se zbira od te posodobitve naprej.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <h3>Samodejna opravila</h3>
+    <ul class="events">
+      {% for j in jobs %}
+      <li><span class="ev-time">{{ j.started_at[5:16].replace('T', ' ') }}</span>
+          <span class="ev-kind">{{ j.job }}</span>
+          {% if j.ok %}<span class="tag ok">ok</span>{% elif j.ok is none %}<span class="tag skip">teče</span>{% else %}<span class="tag bad">napaka</span>{% endif %}
+          <span class="muted small ev-sum" title="{{ j.summary }}">{{ (j.summary or '')[:80] }}</span></li>
+      {% endfor %}
+    </ul>
+    <h3 class="sub-h">Predlogi</h3>
+    <ul class="events">
+      {% for s in suggestions %}
+      <li><span class="ev-time">{{ s.created_at[5:10] }}</span> <span class="ev-who">{{ s.username }}</span> {{ s.body }}</li>
+      {% else %}<li class="muted">Ni predlogov.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -173,6 +173,46 @@ CREATE TABLE IF NOT EXISTS suggestion (
     created_at  TEXT NOT NULL
 );
 
+-- What the school itself says is ordered, as last read from get_user_orders.
+-- This is the source of truth the day board shows: the app's own idea of what
+-- it ordered can drift (an order made on the school site, a failed call), the
+-- school's cannot. `claimed_at` is set once the meal was actually picked up.
+CREATE TABLE IF NOT EXISTS school_order (
+    id               TEXT PRIMARY KEY,   -- the school's order id
+    user_id          TEXT NOT NULL,
+    order_date       TEXT NOT NULL,
+    menu_id          TEXT,
+    menu_name        TEXT,
+    menu_description TEXT,
+    canceled         INTEGER NOT NULL DEFAULT 0,
+    locked           INTEGER NOT NULL DEFAULT 0,
+    claimed_at       TEXT,
+    updated_at       TEXT,
+    first_seen_at    TEXT NOT NULL,
+    synced_at        TEXT NOT NULL
+);
+
+-- When each user's orders were last read, and the order window seen then.
+CREATE TABLE IF NOT EXISTS school_sync (
+    user_id          TEXT PRIMARY KEY,
+    synced_at        TEXT NOT NULL,
+    ok               INTEGER NOT NULL,
+    detail           TEXT,
+    order_days_json  TEXT
+);
+
+-- Append-only history of everything that happened, for analysis later. Other
+-- tables keep only the current state (one pick per day, one override per
+-- day); this keeps every step on the way there.
+CREATE TABLE IF NOT EXISTS event (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT,
+    kind        TEXT NOT NULL,
+    order_date  TEXT,
+    data_json   TEXT,
+    created_at  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS job_run (
     id         TEXT PRIMARY KEY,
     job        TEXT NOT NULL,
@@ -187,6 +227,9 @@ CREATE INDEX IF NOT EXISTS idx_question_status ON match_question (status);
 CREATE INDEX IF NOT EXISTS idx_ranking_user ON ranking (user_id, position);
 CREATE INDEX IF NOT EXISTS idx_override_user ON override (user_id, order_date);
 CREATE INDEX IF NOT EXISTS idx_rating_user ON rating (user_id, score DESC);
+CREATE INDEX IF NOT EXISTS idx_school_order_user ON school_order (user_id, order_date);
+CREATE INDEX IF NOT EXISTS idx_event_user ON event (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_event_kind ON event (kind, created_at);
 """
 
 
@@ -222,6 +265,12 @@ _ADDED_COLUMNS = (
     ("app_user", "tutorial_seen_at", "TEXT"),
     ("rating", "acknowledged", "INTEGER NOT NULL DEFAULT 1"),
     ("ranking", "pinned", "INTEGER NOT NULL DEFAULT 0"),
+    # Which menu plan the picker follows (see plans.py), and its settings.
+    ("app_user", "menu_plan", "TEXT NOT NULL DEFAULT 'ranking'"),
+    ("app_user", "plan_slots", "TEXT"),
+    ("app_user", "plan_fallback", "TEXT"),
+    # Sign the day off instead of falling back to the daily floor (MALICA 7).
+    ("app_user", "skip_floor", "INTEGER NOT NULL DEFAULT 0"),
 )
 
 
@@ -295,3 +344,20 @@ def load_meals():
 
 def components_of(meal_row):
     return json.loads(meal_row["components_json"])
+
+
+# --- history -------------------------------------------------------------
+
+
+def log_event(user_id, kind, order_date=None, **data):
+    """Append one line to the event history. Never raises: losing a line of
+    history is better than failing the action it describes."""
+    try:
+        execute(
+            """INSERT INTO event (id, user_id, kind, order_date, data_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (new_id(), user_id, kind, str(order_date) if order_date else None,
+             json.dumps(data, ensure_ascii=False) if data else None, now()),
+        )
+    except sqlite3.Error:
+        pass

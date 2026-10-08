@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Meniji &middot; Prehrana Plus{% endblock %}
+{% set kratko = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'] %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Meniji</h1>
+    <p class="sub">Izberi, med katerimi meniji naj se naroča. Vrstni red jedi še vedno določa
+      <a href="/meals">lestvica</a>; ročna izbira na dan ima vedno prednost.</p>
+  </div>
+</header>
+
+{% if saved %}
+<div class="notice ok-notice">Shranjeno.{% if user.autopilot %} Dnevi, ki jih šola še sprejema, so že posodobljeni.{% endif %}</div>
+{% endif %}
+
+<div class="plan-grid">
+  {% for card in cards %}
+  <form method="post" action="/menus/plan" class="plan-card{% if card.active %} active{% endif %} plan-{{ card.key }}">
+    <input type="hidden" name="plan" value="{{ card.key }}">
+    <div class="plan-top">
+      <span class="plan-icon" aria-hidden="true">
+        {%- if card.key == 'ranking' -%}
+        <svg viewBox="0 0 24 24"><path d="M5 18h3v-6H5zM10.5 18h3V6h-3zM16 18h3v-9h-3z"/></svg>
+        {%- elif card.key == 'vegi' -%}
+        <svg viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zm0 0 7-7"/></svg>
+        {%- elif card.key == 'hladna' -%}
+        <svg viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></svg>
+        {%- else -%}
+        <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        {%- endif -%}
+      </span>
+      <div class="plan-text">
+        <b>{{ card.label }}</b>
+        <span>{{ card.about }}</span>
+      </div>
+      {% if card.active %}<span class="tag ok">izbrano</span>{% endif %}
+    </div>
+
+    {% if card.key == 'custom' %}
+    <fieldset class="custom-slots">
+      <legend>Izbiraj med</legend>
+      <div class="chip-row">
+        {% for name in slot_names %}
+        <label class="chip"><input type="checkbox" name="slots" value="{{ name }}"
+               {% if name in custom_slots %}checked{% endif %}><span>{{ slot_label(name) }}</span></label>
+        {% endfor %}
+      </div>
+      <label class="fallback-pick">Ko nič ne ustreza:
+        <select name="fallback_slot">
+          {% for name in slot_names %}
+          <option value="{{ name }}" {% if custom_fallback == name %}selected{% endif %}>naroči {{ slot_label(name) }}</option>
+          {% endfor %}
+          <option value="{{ skip_value }}" {% if custom_fallback == skip_value %}selected{% endif %}>odjavi malico</option>
+        </select>
+      </label>
+    </fieldset>
+    {% endif %}
+
+    {% if card.preview %}
+    <ul class="plan-preview" aria-label="Naslednji dnevi">
+      {% for p in card.preview %}
+      <li class="{{ 'skip' if p.skip or not p.slot else '' }}" title="{{ p.name or '' }}">
+        <span class="pd">{{ kratko[p.weekday] }} {{ p.date[8:10]|int }}.</span>
+        <span class="ps">{{ p.slot if p.slot else ('odjava' if p.skip else '–') }}</span>
+        <span class="pn">{{ p.name or '' }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <button class="btn {{ 'ghost' if card.active and card.key != 'custom' else '' }} plan-btn" type="submit"
+            {% if card.active and card.key != 'custom' %}disabled{% endif %}>
+      {% if card.active %}{{ 'Shrani' if card.key == 'custom' else 'Izbrano' }}{% else %}Izberi{% endif %}
+    </button>
+  </form>
+  {% endfor %}
+</div>
+
+{# The red switch. Turning it on means some days end with no lunch at all,
+   so it asks first. #}
+<form method="post" action="/menus/skip-floor" id="brez7" class="card danger-card{% if plan.skip_floor %} on{% endif %}">
+  <input type="hidden" name="enabled" value="{{ 'off' if plan.skip_floor else 'on' }}">
+  <div class="switch-text">
+    <b>Brez menija 7</b>
+    <span>Če na dan ni nobene jedi s tvoje lestvice, se malica <strong>odjavi</strong>,
+      namesto da se naroči {{ floor }}.</span>
+    {% if plan.skip_floor %}
+    <span class="danger-note">Vklopljeno: na take dni ne boš imel malice.</span>
+    {% endif %}
+  </div>
+  <button class="switch danger {{ 'on' if plan.skip_floor else '' }}" type="submit"
+          role="switch" aria-checked="{{ 'true' if plan.skip_floor else 'false' }}"
+          aria-label="Brez menija 7" data-confirm="{{ '' if plan.skip_floor else '1' }}"></button>
+</form>
+
+<dialog class="confirm" id="confirm7" aria-labelledby="confirm7-title">
+  <form method="dialog">
+    <div class="confirm-icon" aria-hidden="true">!</div>
+    <h2 id="confirm7-title">Res vklopim?</h2>
+    <p>Na dneve, ko na jedilniku ni nobene jedi z tvoje lestvice, <strong>ne boš
+      imel malice</strong>. Namesto {{ floor }} se malica odjavi, tudi če je
+      že naročena.</p>
+    <p class="muted">Velja samo za samodejno naročanje. Ročna izbira na dan ima
+      še vedno prednost, izklopiš pa lahko kadarkoli.</p>
+    <div class="confirm-actions">
+      <button class="btn ghost" value="cancel">Prekliči</button>
+      <button class="btn danger-btn" value="ok">Vklopi</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var form = document.getElementById('brez7');
+  var dialog = document.getElementById('confirm7');
+  if (!form) return;
+  var confirmed = false;
+  form.addEventListener('submit', function (event) {
+    var button = form.querySelector('[data-confirm]');
+    if (!button || button.dataset.confirm !== '1' || confirmed) return;
+    event.preventDefault();
+    // Older browsers without <dialog> still get asked, just more plainly.
+    if (!dialog || typeof dialog.showModal !== 'function') {
+      if (window.confirm('Na dneve brez jedi z lestvice ne boš imel malice. Vklopim?')) {
+        confirmed = true; form.submit();
+      }
+      return;
+    }
+    dialog.showModal();
+  });
+  if (!dialog) return;
+  dialog.addEventListener('close', function () {
+    if (dialog.returnValue === 'ok') { confirmed = true; form.submit(); }
+  });
+})();
+</script>
+{% endblock %}

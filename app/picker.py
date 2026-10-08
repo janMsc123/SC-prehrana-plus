@@ -29,7 +29,7 @@ import logging
 from collections import defaultdict
 from datetime import date, datetime
 
-from . import collector, db, fallback, identity, overrides, ranking
+from . import collector, db, fallback, identity, overrides, plans, ranking, school
 from .config import settings
 from .malcomat import AuthError, Client, MalcomatError
 
@@ -85,6 +85,7 @@ def plan(user_row, client, today=None):
         )
     }
     chosen_by_hand = overrides.for_dates(user_row["id"], dates)
+    user_plan = plans.for_user(user_row)
     known = collector._parsed_known_meals()
 
     decisions = []
@@ -102,8 +103,16 @@ def plan(user_row, client, today=None):
             "overridden": False,
             "is_fallback": False,
             "skipped_by_hand": False,
+            "skipped_by_plan": False,
+            "reason": None,
             "existing_order_to_cancel": False,
         }
+
+        if overrides.window_locked(user_row["username"], order_date):
+            decision["status"] = "locked"
+            decision["detail"] = "ordering closes for today/tomorrow at 14:00"
+            decisions.append(decision)
+            continue
 
         if not slots:
             decision["status"] = "skipped"
@@ -158,27 +167,26 @@ def plan(user_row, client, today=None):
 
         if best is None:
             for entry in decision["considered"]:
-                if entry["excluded"]:
-                    continue
-                if entry["position"] is None:
+                if not entry["excluded"] and entry["position"] is None \
+                        and user_plan.allows(entry["slot_name"]):
                     decision["unranked"].append(entry["name"])
-                    continue
-                if best is None or entry["position"] < best["position"]:
-                    best = entry
+            best, reason = plans.choose(decision["considered"], user_plan)
+            decision["reason"] = reason
+            decision["is_fallback"] = reason in ("fallback", "plan_fallback")
 
-        if best is None:
-            # Nothing cleared the floor -- so take the floor. The fallback is
-            # on offer every day and is never rated or excluded in its own
-            # right, which is the whole point: you still get lunch.
-            fallback_slot = fallback.find_in_menu(slots)
-            if fallback_slot is not None:
-                best = next(
-                    (e for e in decision["considered"]
-                     if e["slot_menu_id"] == fallback_slot["menu_id"]),
-                    None,
-                )
-                if best is not None:
-                    decision["is_fallback"] = True
+            if reason == "skip":
+                # The plan says no lunch rather than the floor (or a custom
+                # plan's fallback is "sign off"). Same as signing off by hand,
+                # just decided by the setting rather than per day.
+                decision["status"] = "skipped"
+                decision["skipped_by_plan"] = True
+                if existing_orders.get(order_date):
+                    decision["existing_order_to_cancel"] = True
+                    decision["detail"] = "brez menija 7 · umikam naročilo pri šoli"
+                else:
+                    decision["detail"] = "brez menija 7 · odjava"
+                decisions.append(decision)
+                continue
 
         if best is None:
             decision["status"] = "skipped"
@@ -213,6 +221,10 @@ def plan(user_row, client, today=None):
             decision["detail"] = " · ".join(
                 p for p in ("rezerva", decision["detail"]) if p
             )
+        elif user_plan.key != "ranking":
+            decision["detail"] = " · ".join(
+                p for p in (user_plan.label.lower(), decision["detail"]) if p
+            )
         elif stale_note:
             decision["detail"] = " · ".join(
                 p for p in (stale_note, decision["detail"]) if p
@@ -241,6 +253,22 @@ def _record(user_id, decision, status, detail):
             db.now(),
         ),
     )
+    db.log_event(
+        user_id, "pick." + status, decision["order_date"],
+        slot=choice.get("slot_name"), meal_id=choice.get("meal_id"),
+        detail=detail, overridden=decision.get("overridden", False),
+        reason=decision.get("reason"),
+        by_hand=decision.get("skipped_by_hand", False),
+        by_plan=decision.get("skipped_by_plan", False),
+    )
+
+
+def _sync_after(user_row, client):
+    """Read back what the school now holds, so the board shows the result."""
+    try:
+        school.sync_with_client(user_row, client, lookback=7)
+    except (MalcomatError, AuthError) as exc:
+        log.info("post-order sync failed for %s: %s", user_row["username"], exc)
 
 
 def apply_override(user_row, order_date, dry_run=None):
@@ -285,6 +313,7 @@ def apply_override(user_row, order_date, dry_run=None):
             client.cancel_order(order_date)
         else:
             client.place_order(decision["choice"]["slot_menu_id"], order_date)
+        _sync_after(user_row, client)
 
     if wants_cancel:
         decision["status"] = "canceled"
@@ -351,6 +380,8 @@ def pick_for_user(user_row, today=None, dry_run=None):
                     _record(user_row["id"], decision, "placed",
                             "ordered {}".format(decision["choice"]["slot_name"]))
             results.append(decision)
+
+        _sync_after(user_row, client)
 
     return results
 

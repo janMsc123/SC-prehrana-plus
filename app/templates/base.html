@@ -6,34 +6,50 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
   <title>{% block title %}Prehrana Plus{% endblock %}</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 {% if user and not hide_nav %}
 {% set here = request.url.path %}
 <nav>
-  <div class="nav-top">
-    <a class="brand" href="/">Prehrana&nbsp;Plus</a>
-    <span class="spacer"></span>
-    <span class="who">{{ user.first_name or user.username }}</span>
-    <form method="post" action="/logout"><button class="link">Odjava</button></form>
-  </div>
-  {# Two tabs: the days on one side, the league table on the other. Ujemanja
-     earns a slot while something is waiting; Predlogi is in the footer. #}
-  <div class="tabs">
-    <a href="/"{% if here == '/' %} aria-current="page"{% endif %}>Domov</a>
-    <a href="/meals"{% if here == '/meals' %} aria-current="page"{% endif %}>Lestvica jedi</a>
-    {% if is_admin and (pending_questions or here == '/review') %}
-    <a href="/review"{% if here == '/review' %} aria-current="page"{% endif %}>
-      Ujemanja
-      {% if pending_questions %}<span class="badge">{{ pending_questions }}</span>{% endif %}
-    </a>
-    {% endif %}
+  <div class="nav-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">P+</span><span class="brand-name">Prehrana&nbsp;Plus</span></a>
+
+    {# The places you go. Ujemanja earns a slot only while something waits. #}
+    <div class="tabs">
+      <a href="/"{% if here == '/' %} aria-current="page"{% endif %}>Domov</a>
+      <a href="/meals"{% if here == '/meals' %} aria-current="page"{% endif %}>Lestvica jedi</a>
+      <a href="/menus"{% if here == '/menus' %} aria-current="page"{% endif %}>Meniji</a>
+      {% if is_admin %}
+      <a href="/admin"{% if here == '/admin' %} aria-current="page"{% endif %}>Admin</a>
+      {% endif %}
+      {% if is_admin and (pending_questions or here == '/review') %}
+      <a href="/review"{% if here == '/review' %} aria-current="page"{% endif %}>
+        Ujemanja
+        {% if pending_questions %}<span class="badge">{{ pending_questions }}</span>{% endif %}
+      </a>
+      {% endif %}
+    </div>
+
+    {# Help and feedback sit with the account, on the right, out of the way of
+       the main tabs but one tap from anywhere. #}
+    <div class="nav-user">
+      <a class="icon-link{% if here == '/tutorial' %} on{% endif %}" href="/tutorial" title="Kako deluje">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.8v.4"/><circle cx="12" cy="17" r=".6" class="fill"/></svg>
+        <span>Kako deluje</span>
+      </a>
+      <a class="icon-link{% if here == '/suggest' %} on{% endif %}" href="/suggest" title="Predlogi">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/></svg>
+        <span>Predlogi</span>
+      </a>
+      <span class="who" title="{{ user.username }}">{{ user.first_name or user.username }}</span>
+      <form method="post" action="/logout"><button class="logout">Odjava</button></form>
+    </div>
   </div>
 </nav>
 {% endif %}
 
-<main>
+<main class="{% block main_class %}{% endblock %}">
   {% if user and pending_questions and request.url.path != '/review' %}
   <div class="notice">
     <strong>{{ pending_questions }}</strong> jedi je videti podobnih.
@@ -44,7 +60,7 @@
 </main>
 
 <footer>
-  <a href="/suggest">Predlogi</a> &middot; <a href="/tutorial">Kako deluje</a>
+  Prehrana Plus
   {% if not place_orders %}<span class="warn">&middot; naročanje izklopljeno</span>{% endif %}
 </footer>
 </body>

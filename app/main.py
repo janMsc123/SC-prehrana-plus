@@ -11,11 +11,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, collector, db, fallback, identity, overrides, picker, ranking, suggestions
+from . import (auth, collector, db, fallback, identity, overrides, picker, plans,
+               ranking, school, stats, suggestions)
 from .config import settings
 from .malcomat import AuthError, MalcomatError
 
@@ -210,6 +211,7 @@ def render(request, name, user, **context):
     context.setdefault("place_orders", settings.place_orders)
     context.setdefault("tie_window", ranking.TIE_WINDOW)
     context.setdefault("hide_nav", False)
+    context.setdefault("slot_label", plans.slot_label)
     return templates.TemplateResponse(
         request, name, {"user": user, **context}
     )
@@ -245,6 +247,7 @@ def login_submit(
             error="Šolski sistem ni dosegljiv: {}".format(exc),
         )
 
+    db.log_event(user["id"], "login")
     response = RedirectResponse("/", status_code=303)
     response.set_cookie(
         auth.SESSION_COOKIE,
@@ -273,17 +276,24 @@ def dashboard(request: Request, user=Depends(require_user)):
     The day board is built from the local archive rather than a live call to
     the school, so the page stays fast and still works when MALCOMAT is down.
     """
-    stats = ranking.progress(user["id"])
+    progress = ranking.progress(user["id"])
     overrides.clear_past(user["id"])
-    days = overrides.days(user)
+    sync = school.ensure_fresh(user)
+    days = overrides.days(
+        user,
+        school_orders=school.orders_by_date(user["id"]),
+        orderable=school.orderable_dates(user["id"]),
+    )
     when = next_pick_time()
 
     return render(
         request, "dashboard.html", user,
         meal_count=len(db.load_meals()),
-        progress=stats,
-        rated_anything=stats["rated"] > 0,
+        progress=progress,
+        rated_anything=progress["rated"] > 0,
         days=days,
+        plan=plans.for_user(user),
+        sync=sync,
         chosen_count=sum(1 for d in days if d["override"] or d["skipped"]),
         skip_value=overrides.SKIP,
         archive_empty=not db.query_one("SELECT COUNT(*) AS n FROM observation")["n"],
@@ -298,14 +308,14 @@ def dashboard(request: Request, user=Depends(require_user)):
 @app.get("/rank", response_class=HTMLResponse)
 def rank_page(request: Request, user=Depends(require_user)):
     kind, payload = ranking.next_question(user["id"])
-    stats = ranking.progress(user["id"])
+    done = ranking.progress(user["id"])
 
     if kind == "rate":
         meal = meal_view(payload)
         if meal is None:
             return RedirectResponse("/rank", status_code=303)
         return render(
-            request, "rate.html", user, meal=meal, progress=stats,
+            request, "rate.html", user, meal=meal, progress=done,
             default_score=ranking.MAX_SCORE // 2,
         )
 
@@ -316,7 +326,7 @@ def rank_page(request: Request, user=Depends(require_user)):
         return RedirectResponse("/tutorial", status_code=303)
 
     return render(request, "rank_done.html", user,
-                  total=len(ranking.current_ranking(user["id"])), progress=stats)
+                  total=len(ranking.current_ranking(user["id"])), progress=done)
 
 
 @app.post("/rank/rate")
@@ -479,7 +489,11 @@ def override_set(
     meal_id: str = Form(""),
     user=Depends(require_user),
 ):
+    if overrides.window_locked(user["username"], order_date):
+        return RedirectResponse("/#d-{}".format(order_date), status_code=303)
     overrides.set_override(user["id"], order_date, slot_menu_id, meal_id or None)
+    db.log_event(user["id"], "override.set", order_date,
+                 slot_menu_id=slot_menu_id, meal_id=meal_id or None)
     _apply_override_now(user, order_date)
     return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
@@ -488,7 +502,10 @@ def override_set(
 def override_clear(
     request: Request, order_date: str = Form(...), user=Depends(require_user)
 ):
+    if overrides.window_locked(user["username"], order_date):
+        return RedirectResponse("/#d-{}".format(order_date), status_code=303)
     overrides.clear(user["id"], order_date)
+    db.log_event(user["id"], "override.clear", order_date)
     _apply_override_now(user, order_date)
     return RedirectResponse("/#d-{}".format(order_date), status_code=303)
 
@@ -501,8 +518,8 @@ def run_collect(request: Request, user=Depends(require_user)):
     """Read the menu now. Offered only while the archive is still empty: after
     that the daily job keeps it current and there is nothing to press."""
     try:
-        stats = collector.collect_for_user(user)
-        log.info("manual collect: %s", stats)
+        result = collector.collect_for_user(user)
+        log.info("manual collect: %s", result)
     except (MalcomatError, AuthError) as exc:
         log.warning("manual collect failed: %s", exc)
     return RedirectResponse("/", status_code=303)
@@ -511,7 +528,8 @@ def run_collect(request: Request, user=Depends(require_user)):
 @app.get("/tutorial", response_class=HTMLResponse)
 def tutorial_page(request: Request, user=Depends(require_user)):
     # Nav is suppressed so the only way onward is the acknowledge button.
-    return render(request, "tutorial.html", user, hide_nav=True,
+    return render(request, "tutorial.html", user,
+                  hide_nav=not user["tutorial_seen_at"],
                   progress=ranking.progress(user["id"]))
 
 
@@ -566,7 +584,138 @@ def toggle_autopilot(
     password" to remove it.
     """
     auth.set_autopilot(user["id"], enabled == "on")
+    db.log_event(user["id"], "autopilot", on=(enabled == "on"))
     return RedirectResponse("/", status_code=303)
+
+
+# --- menu plans ----------------------------------------------------------
+
+
+def _apply_plan_now(user_id):
+    """Re-run the picker for this user after a plan change, so the days the
+    school still accepts follow the new plan at once. Best-effort."""
+    user = auth.get_user(user_id)
+    if not user or not user["autopilot"] or not user["password_enc"]:
+        return
+    try:
+        picker.pick_for_user(user)
+    except (MalcomatError, AuthError) as exc:
+        log.warning("re-pick after plan change failed for %s: %s",
+                    user["username"], exc)
+
+
+def _plan_preview(user, key, all_days):
+    """What a plan would order on the next few days, for its card."""
+    user_plan = plans.for_user(user, key=key)
+    out = []
+    for day in all_days[:5]:
+        slot, reason = plans.choose(day["slots"], user_plan)
+        out.append({
+            "date": day["date"], "weekday": day["weekday"],
+            "slot": plans.slot_label(slot["slot_name"]) if slot else None,
+            "name": slot["name"] if slot else None,
+            "skip": reason == "skip",
+        })
+    return out
+
+
+@app.get("/menus", response_class=HTMLResponse)
+def menus_page(request: Request, user=Depends(require_user)):
+    upcoming = overrides.days(user)
+    current = plans.for_user(user)
+    cards = []
+    for key, spec in plans.PLANS.items():
+        cards.append({
+            "key": key, **spec,
+            "active": key == current.key,
+            "preview": _plan_preview(user, key, upcoming),
+        })
+    return render(
+        request, "menus.html", user,
+        cards=cards, plan=current,
+        slot_names=plans.SLOT_NAMES,
+        custom_slots=plans.custom_slots(user),
+        custom_fallback=user["plan_fallback"] or settings.fallback_slot_name,
+        skip_value=plans.SKIP,
+        floor=plans.floor_label(),
+        saved=request.query_params.get("saved"),
+    )
+
+
+@app.post("/menus/plan")
+def menus_set_plan(
+    request: Request,
+    plan: str = Form(...),
+    slots: list[str] = Form([]),
+    fallback_slot: str = Form(""),
+    user=Depends(require_user),
+):
+    if plan not in plans.PLANS:
+        return RedirectResponse("/menus", status_code=303)
+    chosen = [s for s in plans.SLOT_NAMES if s in slots]
+    if plan == "custom":
+        if fallback_slot not in plans.SLOT_NAMES and fallback_slot != plans.SKIP:
+            fallback_slot = settings.fallback_slot_name
+        db.execute(
+            "UPDATE app_user SET menu_plan = ?, plan_slots = ?, plan_fallback = ? WHERE id = ?",
+            (plan, json.dumps(chosen), fallback_slot, user["id"]),
+        )
+    else:
+        db.execute("UPDATE app_user SET menu_plan = ? WHERE id = ?", (plan, user["id"]))
+    db.log_event(user["id"], "plan", plan=plan,
+                 slots=chosen if plan == "custom" else None,
+                 fallback=fallback_slot if plan == "custom" else None)
+    _apply_plan_now(user["id"])
+    return RedirectResponse("/menus?saved=1", status_code=303)
+
+
+@app.post("/menus/skip-floor")
+def menus_skip_floor(
+    request: Request, enabled: str = Form("off"), user=Depends(require_user)
+):
+    on = enabled == "on"
+    db.execute("UPDATE app_user SET skip_floor = ? WHERE id = ?",
+               (1 if on else 0, user["id"]))
+    db.log_event(user["id"], "skip_floor", on=on)
+    _apply_plan_now(user["id"])
+    return RedirectResponse("/menus?saved=1#brez7", status_code=303)
+
+
+# --- admin ---------------------------------------------------------------
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request, user=Depends(require_admin)):
+    return render(
+        request, "admin.html", user,
+        users=stats.users_table(),
+        overview=stats.overview(),
+        popularity=stats.meal_popularity(),
+        events=stats.recent_events(),
+        jobs=stats.recent_jobs(),
+        suggestions=stats.suggestions(),
+    )
+
+
+@app.post("/admin/sync")
+def admin_sync(request: Request, user=Depends(require_admin)):
+    """Read every active user's orders from school now."""
+    totals, errors = school.run()
+    log.info("manual sync: %s %s", totals, errors)
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.get("/admin/export.zip")
+def admin_export(request: Request, names: int = 0, user=Depends(require_admin)):
+    data = stats.export_zip(with_names=bool(names))
+    stamp = datetime.now().strftime("%Y-%m-%d")
+    db.log_event(user["id"], "export", names=bool(names))
+    return Response(
+        data, media_type="application/zip",
+        headers={"Content-Disposition":
+                 'attachment; filename="prehrana-plus-{}{}.zip"'.format(
+                     stamp, "-imena" if names else "")},
+    )
 
 
 @app.post("/settings/forget-password")
@@ -602,6 +751,12 @@ def startup():
             minute=settings.pick_minute,
         ),
         id="pick",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        school.run,
+        CronTrigger(hour=15, minute=30),
+        id="sync",
         replace_existing=True,
     )
     scheduler.start()

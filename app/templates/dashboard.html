@@ -1,15 +1,26 @@
 {% extends "base.html" %}
 {% block title %}Prehrana Plus{% endblock %}
 {% set dnevi = ['Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja'] %}
+{% set kratko = ['pon', 'tor', 'sre', 'čet', 'pet', 'sob', 'ned'] %}
 {% block content %}
-<h1>Živjo, {{ user.first_name or user.username }}</h1>
+<header class="page-head">
+  <div>
+    <h1>Živjo, {{ user.first_name or user.username }}</h1>
+    <p class="sub">
+      <a class="plan-chip" href="/menus" title="Spremeni v zavihku Meniji">
+        <span class="plan-chip-label">Meni</span> {{ plan.label }}
+        {% if plan.skip_floor %}<span class="plan-chip-x">brez menija 7</span>{% endif %}
+      </a>
+    </p>
+  </div>
+</header>
 
 <form method="post" action="/settings/autopilot">
   <input type="hidden" name="enabled" value="{{ 'off' if user.autopilot else 'on' }}">
   <div class="card switch-card {{ 'on' if user.autopilot else 'off' }}">
     <div class="switch-text">
       <b>Samodejno naročanje</b>
-      <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno, nič se ne naroči.' }}</span>
+      <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno, nič se ne naroči samo.' }}</span>
     </div>
     <button class="switch {{ 'on' if user.autopilot else '' }}" type="submit"
             role="switch" aria-checked="{{ 'true' if user.autopilot else 'false' }}"
@@ -18,7 +29,7 @@
 </form>
 
 {# One card, one obvious next step, and the clock that says when it matters. #}
-<div class="card">
+<div class="card next-card">
   {% if meal_count == 0 %}
     <p>Jedilnika še nisem prebral.</p>
     <form method="post" action="/run/collect" class="inline">
@@ -32,12 +43,12 @@
     <a class="btn" href="/meals">Preveri lestvico</a>
   {% else %}
     <p>Vse ocenjeno. Naročanje ve, kaj izbrati.</p>
-    <a class="btn" href="/meals">Uredi lestvico</a>
+    <a class="btn ghost" href="/meals">Uredi lestvico</a>
   {% endif %}
 
   {% if not user.autopilot %}
   <div class="timer off">
-    <span class="timer-label">Nič se ne bo naročilo, dokler je stikalo izklopljeno.</span>
+    <span class="timer-label">Nič se ne bo naročilo samo, dokler je stikalo izklopljeno.</span>
   </div>
   {% elif next_pick_iso %}
   <div class="timer" data-at="{{ next_pick_iso }}">
@@ -48,10 +59,18 @@
   {% endif %}
 </div>
 
-{# The days. One tab per date, one grid of slots per date, and the choice is
-   made by tapping a card: green is yours and stays yours, blue is the one the
-   ranking picked on its own. #}
-<h2>Kaj se naroči</h2>
+{# The days. One tab per date, one grid of slots per date. What is marked as
+   ordered comes from the school's own record, not from what the app meant to
+   do; "bo naročeno" is what the next run (or your pick) will change it to. #}
+<div class="section-head">
+  <h2>Kaj se naroči</h2>
+  {% if sync %}
+  <span class="sync {{ 'ok' if sync.ok else 'stale' }}"
+        title="Zadnje branje iz šolskega sistema: {{ sync.synced_at[:16].replace('T', ' ') }} UTC">
+    {% if sync.ok %}stanje iz šole{% else %}šola ni dosegljiva, zadnje znano stanje{% endif %}
+  </span>
+  {% endif %}
+</div>
 
 {% if archive_empty %}
 <div class="notice">
@@ -62,17 +81,27 @@
 <div class="card"><p>Za prihodnje dni v arhivu ni jedilnika.</p></div>
 {% else %}
 
+{% if not user.autopilot %}
+<p class="board-off">Samodejno naročanje je izklopljeno: prikazano je samo, kar je res naročeno pri šoli.</p>
+{% endif %}
+
 <div class="legend">
+  <span><span class="swatch auto"></span> naročeno</span>
+  <span><span class="swatch pending"></span> bo naročeno</span>
   <span><span class="swatch pick"></span> tvoja izbira</span>
-  <span><span class="swatch auto"></span> samodejna</span>
   <span><span class="swatch skip"></span> odjava</span>
-  {% if chosen_count %}<span class="muted">{{ chosen_count }} izbranih ročno</span>{% endif %}
+  {% if chosen_count %}<span class="muted">· {{ chosen_count }} ročno</span>{% endif %}
 </div>
 
 <section class="board" id="board">
   <div class="board-days" role="tablist" aria-label="Dnevi">
     {% for day in days %}
-    <button type="button" class="day-tab{% if day.override %} has-pick{% elif day.skipped %} has-skip{% endif %}"
+    {%- if day.override -%}{% set dot = 'pick' %}
+    {%- elif day.skipped or day.plan_skip -%}{% set dot = 'skip' %}
+    {%- elif day.ordered_slot or day.auto -%}{% set dot = 'auto' %}
+    {%- else -%}{% set dot = '' %}{%- endif -%}
+    {% set pale = day.state in ('pending', 'cancel_pending') %}
+    <button type="button" class="day-tab dot-{{ dot or 'none' }}{% if pale %} pale{% endif %}{% if day.locked %} locked{% endif %}"
             role="tab" aria-selected="false" data-date="{{ day.date }}">
       <span class="dow">{{ dnevi[day.weekday] }}</span>
       <span class="dnum">{{ day.date[8:10]|int }}.{{ day.date[5:7]|int }}.</span>
@@ -83,38 +112,69 @@
 
   <div class="board-main">
     {% for day in days %}
+    {% set target = day.slots|selectattr('is_target')|first %}
+    {% set ordered = day.slots|selectattr('is_ordered')|first %}
     <div class="board-panel" role="tabpanel" data-date="{{ day.date }}"
          id="d-{{ day.date }}" hidden>
-      <p class="board-head">
-        {{ dnevi[day.weekday] }} {{ day.date[8:10]|int }}. {{ day.date[5:7]|int }}.
-        {% if day.location %}<span class="muted">· {{ day.location }}</span>{% endif %}
+      <div class="board-head">
+        <span class="board-date">{{ dnevi[day.weekday] }} {{ day.date[8:10]|int }}. {{ day.date[5:7]|int }}.</span>
+        {% if day.location %}<span class="muted">{{ day.location }}</span>{% endif %}
+      </div>
+
+      {# One sentence on where this day stands, in the school's terms. #}
+      <p class="day-status state-{{ day.state }}">
+        {% if day.state == 'ordered' and ordered %}
+          <b>Naročeno:</b> {{ ordered.label }}{% if day.claimed %} · prevzeto{% endif %}
+        {% elif day.state == 'pending' and target %}
+          <b>Bo naročeno:</b> {{ target.label }}{% if ordered %} <span class="muted">(zdaj {{ ordered.label }})</span>{% endif %}
+        {% elif day.state == 'cancel_pending' %}
+          <b>Bo odjavljeno.</b> <span class="muted">Pri šoli je še {{ ordered.label if ordered else 'naročilo' }}.</span>
+        {% elif day.state == 'off' %}
+          <b>Odjavljeno</b>{% if day.plan_skip %} <span class="muted">· brez menija 7, nič z lestvice</span>{% endif %}
+        {% else %}
+          <span class="muted">Ta dan ni nič naročeno.</span>
+        {% endif %}
       </p>
 
+      {% if day.locked %}
+      <p class="warn board-note">{% if day.time_locked %}Po 14:00 ni več mogoče naročati za danes in jutri.{% else %}Rok za spremembe je potekel.{% endif %}</p>
+      {% endif %}
       {% if day.override_stale %}
       <p class="warn board-note">Prejšnja izbira ni več na jedilniku.</p>
       {% endif %}
 
       <form method="post" action="/override/set">
         <input type="hidden" name="order_date" value="{{ day.date }}">
-        <div class="slot-grid">
+        <fieldset class="slot-grid" {% if day.locked %}disabled{% endif %}>
           {% for slot in day.slots %}
-          <button class="slot-card{% if slot.is_override %} picked{% elif slot.is_auto and not day.override and not day.skipped %} auto{% endif %}"
+          {%- set colour = 'picked' if slot.is_override else 'auto' -%}
+          {%- set waiting = slot.is_target and not slot.is_ordered and day.state == 'pending' -%}
+          {%- set leaving = slot.is_ordered and not slot.is_target and day.state in ('pending', 'cancel_pending') -%}
+          {%- if slot.is_ordered or waiting -%}{% set cls = colour %}
+          {%- elif slot.is_override -%}{% set cls = 'picked pending' %}
+          {%- else -%}{% set cls = '' %}{%- endif -%}
+          <button class="slot-card {{ cls }}{% if waiting %} pending{% endif %}{% if leaving %} leaving{% endif %}{% if not slot.allowed %} outside{% endif %}"
                   type="submit" name="slot_menu_id" value="{{ slot.slot_menu_id }}"
                   title="{{ slot.description }}">
-            <span class="slot-title">{{ slot.slot_name }}</span>
+            {% if slot.is_ordered %}
+              <span class="slot-state">{{ 'prevzeto' if day.claimed else ('bo zamenjano' if leaving else 'naročeno') }}</span>
+            {% elif waiting %}
+              <span class="slot-state">bo naročeno</span>
+            {% endif %}
+            <span class="slot-title">{{ slot.label }}</span>
             <span class="slot-desc">{{ slot.description }}</span>
             <span class="slot-meta">
               {%- if slot.excluded %}nikoli
               {%- elif slot.is_fallback %}rezerva
               {%- elif slot.position is none %}ni ocenjena
-              {%- else %}#{{ slot.position + 1 }}{% endif -%}
+              {%- else %}#{{ slot.position + 1 }} na lestvici{% endif -%}
             </span>
           </button>
           {% endfor %}
 
           {# Saying no. The X spans the whole tile so it reads as a crossing
              out rather than as one more thing on the menu. #}
-          <button class="slot-card skip{% if day.skipped %} picked{% endif %}"
+          <button class="slot-card skip{% if day.skipped %} picked{% elif day.plan_skip %} planned{% endif %}"
                   type="submit" name="slot_menu_id" value="{{ skip_value }}"
                   title="Ta dan ne naroči ničesar">
             <svg class="slot-x" viewBox="0 0 100 100" preserveAspectRatio="none"
@@ -125,11 +185,11 @@
             {# Kept to two short labels: the X runs through the tile, so
                anything longer would be read across a diagonal line. #}
             <span class="slot-title">BREZ MALICE</span>
-            <span class="slot-meta">odjava</span>
+            <span class="slot-meta">{{ 'brez menija 7' if day.plan_skip else 'odjava' }}</span>
           </button>
-        </div>
+        </fieldset>
 
-        {% if day.override or day.skipped %}
+        {% if (day.override or day.skipped) and not day.locked %}
         <button class="clear-pick" type="submit" formaction="/override/clear">
           nazaj na samodejno
         </button>

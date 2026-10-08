@@ -23,9 +23,38 @@ not offered.
 from __future__ import annotations
 
 from collections import OrderedDict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from . import db, ranking
+from .config import settings
+
+#: Local hour from which ordinary users can no longer order for today or
+#: tomorrow. Admins are exempt. The school's own cutoffs still apply on top.
+ORDER_CLOSE_HOUR = 14
+
+
+def is_admin_name(username):
+    return (username or "").lower() in settings.admin_usernames
+
+
+def window_locked(username, order_date, now=None):
+    """True if this user may not order/change `order_date` right now.
+
+    From 14:00 local time, non-admins are locked out of the same day and the
+    next day (hand picks and autopilot alike). Admins are never locked here.
+    """
+    if is_admin_name(username):
+        return False
+    try:
+        zone = ZoneInfo(settings.timezone)
+    except Exception:
+        zone = ZoneInfo("UTC")
+    now = now or datetime.now(zone)
+    if now.hour < ORDER_CLOSE_HOUR:
+        return False
+    d = str(order_date)[:10]
+    return d in (str(now.date()), str(now.date() + timedelta(days=1)))
 
 #: How far ahead the day board looks. The school publishes roughly three weeks,
 #: and the collector sweeps 28 days, so this matches what can actually be there.
@@ -100,40 +129,27 @@ def clear_past(user_id, today=None):
 # --- the day board -------------------------------------------------------
 
 
-def _auto_choice(slots, positions, excluded):
-    """Which slot the picker would take on its own, or None.
-
-    Mirrors the rule in picker.plan: best ranked position wins, exclusions and
-    unranked dishes are passed over, and when nothing clears the floor the
-    daily fallback is taken. Kept here so the board shows the same answer
-    the picker will reach, without a network call.
-    """
-    from . import fallback
-
-    best = None
-    best_position = None
-    for slot in slots:
-        if slot["meal_id"] in excluded:
-            continue
-        position = positions.get(slot["meal_id"])
-        if position is None:
-            continue
-        if best is None or position < best_position:
-            best, best_position = slot, position
-    if best is None:
-        best = next(
-            (s for s in slots if fallback.is_fallback_slot(s["slot_name"])), None
-        )
-    return best
-
-
-def days(user_row, today=None, horizon=HORIZON_DAYS):
+def days(user_row, today=None, horizon=HORIZON_DAYS, school_orders=None,
+         orderable=None):
     """Upcoming archived days, each with its slots and the current choice.
 
     Returns a list of dicts ordered by date. Only dates from today onward are
-    included -- a day whose cutoff has passed cannot be changed, so offering it
-    would only invite a click that does nothing.
+    included.
+
+    `school_orders` ({date: row}) is what the school says is ordered; a slot
+    is marked `is_ordered` only from that, never from what the app meant to
+    do. `orderable` is the set of dates the school still accepts changes for
+    (None = unknown); today outside it is past its cutoff and `locked`.
+
+    With ordering switched off nothing is promised: there is no automatic
+    choice and nothing "will be ordered". What the school holds is still
+    shown, because it is true either way.
     """
+    from . import plans
+
+    autopilot = bool(user_row["autopilot"]) if "autopilot" in user_row.keys() else True
+    plan = plans.for_user(user_row)
+    school_orders = school_orders or {}
     today = today or date.today()
     end = today + timedelta(days=horizon)
 
@@ -176,13 +192,46 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
     for menu_date, slots in by_date.items():
         override_row = chosen.get(menu_date)
         override_slot = override_row["slot_menu_id"] if override_row else None
-        auto = _auto_choice(slots, positions, excluded)
+        auto, auto_reason = plans.choose(slots, plan)
+        if not autopilot:
+            auto, auto_reason = None, None
+        standing = school_orders.get(menu_date)
+        ordered_slot = standing["menu_id"] if standing else None
+
+        skipped = is_skip(override_slot)
+        has_pick = any(s["slot_menu_id"] == override_slot for s in slots)
+        # The slot this day is heading for: a hand pick, else the plan's.
+        target = override_slot if has_pick else (
+            None if skipped or override_slot else
+            (auto["slot_menu_id"] if auto else None))
 
         for slot in slots:
             slot["is_override"] = slot["slot_menu_id"] == override_slot
             slot["is_auto"] = auto is not None and slot["slot_menu_id"] == auto["slot_menu_id"]
+            slot["is_ordered"] = ordered_slot is not None and slot["slot_menu_id"] == ordered_slot
+            slot["is_target"] = target is not None and slot["slot_menu_id"] == target
+            slot["allowed"] = plan.allows(slot["slot_name"])
+            slot["label"] = plans.slot_label(slot["slot_name"])
 
-        skipped = is_skip(override_slot)
+        locked = (
+            orderable is not None and menu_date not in orderable
+            and menu_date <= str(today)
+        )
+        time_locked = window_locked(user_row["username"], menu_date)
+        locked = locked or time_locked
+        # Will the school's record change by itself? Only if something is
+        # aiming somewhere other than what stands, and something will act:
+        # the scheduled run (ordering on) or the instant push of a hand pick.
+        acts = autopilot or bool(override_row)
+        if skipped or (auto_reason == "skip" and not override_row):
+            state = "cancel_pending" if standing and acts and not locked else "off"
+        elif target is None:
+            state = "ordered" if standing else "none"
+        elif target == ordered_slot:
+            state = "ordered"
+        else:
+            state = "pending" if acts and not locked else ("ordered" if standing else "none")
+
         out.append(
             {
                 "date": menu_date,
@@ -197,6 +246,15 @@ def days(user_row, today=None, horizon=HORIZON_DAYS):
                 ),
                 # Signed off this day: nothing is ordered, not even the floor.
                 "skipped": skipped,
+                # The plan itself signs this day off (no MALICA 7).
+                "plan_skip": auto_reason == "skip" and not override_row,
+                "auto_reason": auto_reason,
+                "standing": dict(standing) if standing else None,
+                "ordered_slot": ordered_slot,
+                "state": state,
+                "locked": locked,
+                "time_locked": time_locked,
+                "claimed": bool(standing and standing["claimed_at"]),
                 # An override whose slot is no longer on the menu for that day:
                 # the school changed the offer after the choice was made. A
                 # skip never matches a slot and is not stale for that reason.

@@ -40,11 +40,11 @@ class AuthError(MalcomatError):
 class Client:
     """A logged-in session. Use as a context manager."""
 
-    def __init__(self, base_url=None):
+    def __init__(self, base_url=None, timeout=None):
         self.base_url = (base_url or settings.base_url).rstrip("/")
         self._http = httpx.Client(
             base_url=self.base_url,
-            timeout=TIMEOUT,
+            timeout=httpx.Timeout(timeout) if timeout else TIMEOUT,
             follow_redirects=True,
             headers={
                 "Content-Type": "application/json",
