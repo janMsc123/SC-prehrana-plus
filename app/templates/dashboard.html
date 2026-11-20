@@ -21,6 +21,9 @@
     <div class="switch-text">
       <b>Samodejno naročanje</b>
       <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno, nič se ne naroči samo.' }}</span>
+      {% if user.autopilot and next_pick_iso %}
+      <span class="timer-mini" data-at="{{ next_pick_iso }}">Naslednje čez <b id="countdown">·</b> · {{ next_pick_label }}</span>
+      {% endif %}
     </div>
     <button class="switch {{ 'on' if user.autopilot else '' }}" type="submit"
             role="switch" aria-checked="{{ 'true' if user.autopilot else 'false' }}"
@@ -46,17 +49,6 @@
     <a class="btn ghost" href="/meals">Uredi lestvico</a>
   {% endif %}
 
-  {% if not user.autopilot %}
-  <div class="timer off">
-    <span class="timer-label">Nič se ne bo naročilo samo, dokler je stikalo izklopljeno.</span>
-  </div>
-  {% elif next_pick_iso %}
-  <div class="timer" data-at="{{ next_pick_iso }}">
-    <span class="timer-label">Naslednje naročanje čez</span>
-    <b class="timer-value" id="countdown">·</b>
-    <span class="timer-when">{{ next_pick_label }}</span>
-  </div>
-  {% endif %}
 </div>
 
 {# The days. One tab per date, one grid of slots per date. What is marked as
@@ -64,10 +56,10 @@
    do; "bo naročeno" is what the next run (or your pick) will change it to. #}
 <div class="section-head">
   <h2>Kaj se naroči</h2>
-  {% if sync %}
-  <span class="sync {{ 'ok' if sync.ok else 'stale' }}"
+  {% if sync and not sync.ok %}
+  <span class="sync stale"
         title="Zadnje branje iz šolskega sistema: {{ sync.synced_at[:16].replace('T', ' ') }} UTC">
-    {% if sync.ok %}stanje iz šole{% else %}šola ni dosegljiva, zadnje znano stanje{% endif %}
+    šola ni dosegljiva, zadnje znano stanje
   </span>
   {% endif %}
 </div>
@@ -89,14 +81,17 @@
   <span><span class="swatch auto"></span> naročeno</span>
   <span><span class="swatch pending"></span> bo naročeno</span>
   <span><span class="swatch pick"></span> tvoja izbira</span>
+  {% if user.claude_used_at or days|selectattr('by_claude')|list %}
+  <span><span class="swatch claude"></span> izbral Claude</span>
+  {% endif %}
   <span><span class="swatch skip"></span> odjava</span>
-  {% if chosen_count %}<span class="muted">· {{ chosen_count }} ročno</span>{% endif %}
 </div>
 
 <section class="board" id="board">
   <div class="board-days" role="tablist" aria-label="Dnevi">
     {% for day in days %}
-    {%- if day.override -%}{% set dot = 'pick' %}
+    {%- if day.override and day.by_claude -%}{% set dot = 'claude' %}
+    {%- elif day.override -%}{% set dot = 'pick' %}
     {%- elif day.skipped or day.plan_skip -%}{% set dot = 'skip' %}
     {%- elif day.ordered_slot or day.auto -%}{% set dot = 'auto' %}
     {%- else -%}{% set dot = '' %}{%- endif -%}
@@ -124,7 +119,7 @@
       {# One sentence on where this day stands, in the school's terms. #}
       <p class="day-status state-{{ day.state }}">
         {% if day.state == 'ordered' and ordered %}
-          <b>Naročeno:</b> {{ ordered.label }}{% if day.claimed %} · prevzeto{% endif %}
+          <b>{{ ordered.label }}</b>{% if day.claimed %} · prevzeto{% endif %}
         {% elif day.state == 'pending' and target %}
           <b>Bo naročeno:</b> {{ target.label }}{% if ordered %} <span class="muted">(zdaj {{ ordered.label }})</span>{% endif %}
         {% elif day.state == 'cancel_pending' %}
@@ -147,11 +142,11 @@
         <input type="hidden" name="order_date" value="{{ day.date }}">
         <fieldset class="slot-grid" {% if day.locked %}disabled{% endif %}>
           {% for slot in day.slots %}
-          {%- set colour = 'picked' if slot.is_override else 'auto' -%}
+          {%- set colour = 'claude' if slot.is_claude else ('picked' if slot.is_override else 'auto') -%}
           {%- set waiting = slot.is_target and not slot.is_ordered and day.state == 'pending' -%}
           {%- set leaving = slot.is_ordered and not slot.is_target and day.state in ('pending', 'cancel_pending') -%}
           {%- if slot.is_ordered or waiting -%}{% set cls = colour %}
-          {%- elif slot.is_override -%}{% set cls = 'picked pending' %}
+          {%- elif slot.is_override -%}{% set cls = colour ~ ' pending' %}
           {%- else -%}{% set cls = '' %}{%- endif -%}
           <button class="slot-card {{ cls }}{% if waiting %} pending{% endif %}{% if leaving %} leaving{% endif %}{% if not slot.allowed %} outside{% endif %}"
                   type="submit" name="slot_menu_id" value="{{ slot.slot_menu_id }}"
@@ -205,7 +200,7 @@
 (function () {
   // The countdown to the next ordering run. The server has already worked out
   // when that is, in its own timezone; this only turns it into a distance.
-  var box = document.querySelector('.timer[data-at]');
+  var box = document.querySelector('[data-at]');
   var out = document.getElementById('countdown');
   if (box && out) {
     var target = new Date(box.dataset.at).getTime();

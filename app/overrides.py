@@ -35,7 +35,7 @@ ORDER_CLOSE_HOUR = 14
 
 
 def is_admin_name(username):
-    return (username or "").lower() in settings.admin_usernames
+    return settings.is_admin_username(username)
 
 
 def window_locked(username, order_date, now=None):
@@ -95,16 +95,17 @@ def for_dates(user_id, dates=None):
     }
 
 
-def set_override(user_id, order_date, slot_menu_id, meal_id=None):
+def set_override(user_id, order_date, slot_menu_id, meal_id=None, source=None):
     db.execute(
         """INSERT INTO override (user_id, order_date, slot_menu_id, meal_id,
-                                 created_at)
-           VALUES (?, ?, ?, ?, ?)
+                                 created_at, source)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(user_id, order_date) DO UPDATE SET
              slot_menu_id = excluded.slot_menu_id,
              meal_id      = excluded.meal_id,
-             created_at   = excluded.created_at""",
-        (user_id, str(order_date), slot_menu_id, meal_id, db.now()),
+             created_at   = excluded.created_at,
+             source       = excluded.source""",
+        (user_id, str(order_date), slot_menu_id, meal_id, db.now(), source),
     )
 
 
@@ -207,8 +208,10 @@ def days(user_row, today=None, horizon=HORIZON_DAYS, school_orders=None,
             None if skipped or override_slot else
             (auto["slot_menu_id"] if auto else None))
 
+        by_claude = bool(override_row) and override_row["source"] == "claude"
         for slot in slots:
             slot["is_override"] = slot["slot_menu_id"] == override_slot
+            slot["is_claude"] = slot["is_override"] and by_claude
             slot["is_auto"] = auto is not None and slot["slot_menu_id"] == auto["slot_menu_id"]
             slot["is_ordered"] = ordered_slot is not None and slot["slot_menu_id"] == ordered_slot
             slot["is_target"] = target is not None and slot["slot_menu_id"] == target
@@ -248,6 +251,7 @@ def days(user_row, today=None, horizon=HORIZON_DAYS, school_orders=None,
                 ),
                 # Signed off this day: nothing is ordered, not even the floor.
                 "skipped": skipped,
+                "by_claude": by_claude and has_pick,
                 # The plan itself signs this day off (no MALICA 7).
                 "plan_skip": auto_reason == "skip" and not override_row,
                 "auto_reason": auto_reason,

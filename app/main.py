@@ -11,11 +11,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import (auth, collector, db, fallback, identity, overrides, picker, plans,
+from . import (auth, collector, db, fallback, identity, legal, mcp, overrides, picker, plans,
                ranking, school, stats, suggestions)
 from .config import settings
 from .malcomat import AuthError, MalcomatError
@@ -30,6 +30,15 @@ BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI(title="Prehrana Plus", docs_url=None, redoc_url=None)
+app.include_router(mcp.router)
+app.include_router(legal.router)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(BASE_DIR / "static" / "favicon.ico", media_type="image/x-icon")
+
+
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 
@@ -84,7 +93,8 @@ def pick_label(when):
 
 
 #: Paths reachable while the one-off explainer is still outstanding.
-_TUTORIAL_EXEMPT = ("/tutorial", "/logout", "/login", "/static", "/healthz", "/rank")
+_TUTORIAL_EXEMPT = ("/tutorial", "/logout", "/login", "/static", "/healthz", "/rank",
+                    "/.well-known", "/oauth", "/mcp", "/privacy", "/claude")
 
 
 @app.middleware("http")
@@ -189,9 +199,9 @@ def is_admin(user):
     Answering an identity question merges two meals for *everyone*, so it is
     upkeep for whoever runs the instance rather than a per-user setting.
     """
-    if user is None or not settings.admin_usernames:
+    if user is None:
         return False
-    return (user["username"] or "").lower() in settings.admin_usernames
+    return settings.is_admin_username(user["username"])
 
 
 def require_admin(request: Request):

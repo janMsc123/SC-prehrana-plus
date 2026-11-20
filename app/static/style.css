@@ -39,6 +39,10 @@
   /* Ordered at school, and the lighter "will be ordered" beside it. */
   --auto: #2f6fe4;
   --auto-deep: #1d4fb8;
+
+  /* A meal Claude set through the connector. */
+  --claude: #c2580a;
+  --claude-deep: #8f3f06;
   --pending-bg: rgba(96, 165, 250, .5);
 
   --tap: 44px;
@@ -635,6 +639,7 @@ button.meal .seen { display: block; margin-top: .6rem; color: var(--muted); font
 }
 .day-tab.dot-pick .dot { background: var(--good); }
 .day-tab.dot-auto .dot { background: var(--auto); }
+.day-tab.dot-claude .dot { background: var(--claude); }
 .day-tab.dot-skip .dot { background: var(--bad); }
 /* Not happened yet: the same colour, half there. */
 .day-tab.pale .dot { opacity: .5; }
@@ -684,7 +689,15 @@ button.slot-card.picked {
   background: var(--good); border-color: #044f30;
   box-shadow: 0 0 0 3px rgba(6, 118, 71, .22);
 }
+/* Set by Claude through the connector. */
+button.slot-card.claude {
+  background: var(--claude); border-color: var(--claude-deep);
+  box-shadow: 0 0 0 3px rgba(194, 88, 10, .22);
+}
 button.slot-card.auto .slot-title,
+button.slot-card.claude .slot-title,
+button.slot-card.claude .slot-desc,
+button.slot-card.claude .slot-meta,
 button.slot-card.auto .slot-desc,
 button.slot-card.auto .slot-meta,
 button.slot-card.picked .slot-title,
@@ -701,9 +714,16 @@ button.slot-card.picked.pending {
   background: rgba(6, 118, 71, .45); border-color: rgba(6, 118, 71, .5);
   box-shadow: none;
 }
+button.slot-card.claude.pending {
+  background: rgba(234, 130, 40, .45); border-color: rgba(194, 88, 10, .5);
+  box-shadow: none;
+}
 button.slot-card.pending .slot-title,
 button.slot-card.pending .slot-desc,
 button.slot-card.pending .slot-meta { color: #10264f; }
+button.slot-card.claude.pending .slot-title,
+button.slot-card.claude.pending .slot-desc,
+button.slot-card.claude.pending .slot-meta { color: #4a2200; }
 button.slot-card.picked.pending .slot-title,
 button.slot-card.picked.pending .slot-desc,
 button.slot-card.picked.pending .slot-meta { color: #053321; }
@@ -778,6 +798,7 @@ button.clear-pick {
 button.clear-pick:hover { border-color: var(--bad); color: var(--bad); }
 
 .legend .swatch.pick { background: var(--good); }
+.legend .swatch.claude { background: var(--claude); }
 .legend .swatch.auto { background: var(--auto); }
 .legend .swatch.pending { background: var(--pending-bg); border: 1px solid rgba(47, 111, 228, .45); }
 
@@ -802,6 +823,13 @@ button.slot-card.skip.planned {
 }
 .timer-when { color: var(--muted); font-size: .82rem; }
 .timer.off .timer-value { color: var(--muted); }
+/* The countdown tucked into the autopilot switch. */
+.switch-card .switch-text span.timer-mini {
+  display: block; margin-top: .2rem; font-size: .74rem;
+}
+.switch-card .switch-text .timer-mini b {
+  display: inline; font-size: inherit; font-variant-numeric: tabular-nums;
+}
 
 /* --- tutorial ----------------------------------------------------------- */
 
@@ -905,7 +933,14 @@ button.switch:focus-visible { outline: 3px solid var(--brand); outline-offset: 3
   background: #f2f4f7; border-radius: 10px; color: var(--muted);
   padding: .55rem .8rem; font-size: .85rem; margin: 0 0 .8rem;
 }
-.next-card p { margin: 0 0 .7rem; }
+/* A small one-line nudge, not a big card: text left, button right. */
+.card.next-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem; flex-wrap: wrap; padding: .6rem .9rem;
+}
+.next-card p { margin: 0; font-size: .9rem; }
+.next-card .btn { padding: .35rem .8rem; font-size: .85rem; }
+.next-card form.inline { margin: 0; }
 
 .board-head {
   display: flex; align-items: baseline; justify-content: center; gap: .5rem;

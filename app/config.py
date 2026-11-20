@@ -43,6 +43,17 @@ class Settings:
         self.pick_hour = _int("PICK_CRON_HOUR", 7)
         self.pick_minute = _int("PICK_CRON_MINUTE", 0)
 
+        # Public origin, used in the OAuth/MCP metadata Claude reads.
+        self.public_url = os.environ.get(
+            "PUBLIC_URL", "https://malcomat.pajp.duckdns.org"
+        ).rstrip("/")
+
+        # The one account the daily menu collection logs in as. The menu is the
+        # same for everyone at a location, so reading it once is enough.
+        self.collect_username = os.environ.get(
+            "COLLECT_USERNAME", "marko_jan_39"
+        ).strip().lower()
+
         self.timezone = os.environ.get("TZ", "Europe/Ljubljana")
 
         # The slot that is on offer every school day. It acts as the floor:
@@ -61,6 +72,13 @@ class Settings:
             name.strip().lower()
             for name in os.environ.get("ADMIN_USERNAMES", "").split(",")
             if name.strip()
+        }
+        # Also admin: any username containing one of these pieces, e.g.
+        # "kores" makes kores_simone_40 an admin the moment they sign in.
+        self.admin_username_contains = {
+            part.strip().lower()
+            for part in os.environ.get("ADMIN_USERNAME_CONTAINS", "").split(",")
+            if part.strip()
         }
 
         # Chat webhook that suggestions are forwarded to. A credential: anyone
@@ -88,6 +106,15 @@ class Settings:
         """A stable Fernet key derived from SECRET_KEY."""
         digest = hashlib.sha256(self.secret_key.encode("utf-8")).digest()
         return base64.urlsafe_b64encode(digest)
+
+    def is_admin_username(self, username):
+        """Named in ADMIN_USERNAMES, or contains a piece of ADMIN_USERNAME_CONTAINS."""
+        name = (username or "").lower()
+        if not name:
+            return False
+        return name in self.admin_usernames or any(
+            part in name for part in self.admin_username_contains
+        )
 
 
 settings = Settings()

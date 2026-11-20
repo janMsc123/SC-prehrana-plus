@@ -10,6 +10,8 @@ import tempfile
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-real-use")
 os.environ.setdefault("PLACE_ORDERS", "false")
-os.environ.setdefault(
-    "DATABASE_PATH", os.path.join(tempfile.mkdtemp(prefix="prehrana-test-"), "test.db")
+# Always a throwaway database. setdefault was not enough: inside the container
+# DATABASE_PATH already points at the real one, and the tests wrote to it.
+os.environ["DATABASE_PATH"] = os.path.join(
+    tempfile.mkdtemp(prefix="prehrana-test-"), "test.db"
 )

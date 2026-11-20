@@ -271,6 +271,11 @@ _ADDED_COLUMNS = (
     ("app_user", "plan_fallback", "TEXT"),
     # Sign the day off instead of falling back to the daily floor (MALICA 7).
     ("app_user", "skip_floor", "INTEGER NOT NULL DEFAULT 0"),
+    # Who set a hand pick: "claude" when it came through the MCP connector.
+    ("override", "source", "TEXT"),
+    # First time this person used the Claude connector; the dashboard only
+    # explains Claude's colour to people who have.
+    ("app_user", "claude_used_at", "TEXT"),
 )
 
 

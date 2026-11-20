@@ -25,6 +25,7 @@ import logging
 from datetime import date, timedelta
 
 from . import db, identity
+from .config import settings
 from .malcomat import AuthError, Client, MalcomatError
 
 log = logging.getLogger("prehrana.collector")
@@ -222,7 +223,7 @@ def decrypt_password(blob):
 
 
 def run(today=None):
-    """The scheduled Phase 1 job: collect for every user with autopilot on."""
+    """The scheduled Phase 1 job: read the menu once, as COLLECT_USERNAME."""
     run_id = db.new_id()
     db.execute(
         "INSERT INTO job_run (id, job, started_at) VALUES (?, 'collect', ?)",
@@ -231,9 +232,17 @@ def run(today=None):
     totals = {"users": 0, "new_observations": 0, "new_meals": 0, "questions": 0}
     errors = []
 
+    # One login is enough: the menu is shared by everyone at a location, and
+    # reading it per user only added traffic to the school.
     users = db.query(
-        "SELECT * FROM app_user WHERE password_enc IS NOT NULL AND autopilot = 1"
+        "SELECT * FROM app_user WHERE lower(username) = ? AND password_enc IS NOT NULL",
+        (settings.collect_username,),
     )
+    if not users:
+        msg = "collector account {!r} not found or has no stored password".format(
+            settings.collect_username)
+        log.warning(msg)
+        errors.append(msg)
     for user in users:
         try:
             stats = collect_for_user(user, today=today)
