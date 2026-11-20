@@ -22,7 +22,7 @@
       <b>Samodejno naročanje</b>
       <span>{{ 'Naroči ti vsak dan sproti.' if user.autopilot else 'Izklopljeno, nič se ne naroči samo.' }}</span>
       {% if user.autopilot and next_pick_iso %}
-      <span class="timer-mini" data-at="{{ next_pick_iso }}">Naslednje čez <b id="countdown">·</b> · {{ next_pick_label }}</span>
+      <span class="timer-mini" data-at="{{ next_pick_iso }}">Naslednje naročanje čez <b id="countdown">·</b></span>
       {% endif %}
     </div>
     <button class="switch {{ 'on' if user.autopilot else '' }}" type="submit"
