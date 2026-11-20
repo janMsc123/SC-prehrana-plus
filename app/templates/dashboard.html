@@ -6,12 +6,6 @@
 <header class="page-head">
   <div>
     <h1>Živjo, {{ user.first_name or user.username }}</h1>
-    <p class="sub">
-      <a class="plan-chip" href="/menus" title="Spremeni v zavihku Meniji">
-        <span class="plan-chip-label">Meni</span> {{ plan.label }}
-        {% if plan.skip_floor %}<span class="plan-chip-x">brez menija 7</span>{% endif %}
-      </a>
-    </p>
   </div>
 </header>
 
