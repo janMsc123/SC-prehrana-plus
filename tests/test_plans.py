@@ -130,13 +130,19 @@ def test_a_hand_pick_still_beats_the_plan(user):
     assert decision["choice"]["slot_name"] == "MALICA 1"
 
 
-def test_custom_plan_with_sign_off_fallback(user):
+def test_one_menu_plan_orders_that_menu_whatever_is_ranked(user):
     ids, client = week(MENU)
     ranking.save_rating(user, ids[1], 90)
-    row = fresh(user, menu_plan="custom", plan_slots='["MALICA 5", "MALICA 6"]',
-                plan_fallback=plans.SKIP)
+    row = fresh(user, menu_plan="custom", plan_slots='["MALICA 3"]',
+                plan_fallback="MALICA 3")
     decision = picker.plan(row, client, today=TODAY)[0]
-    assert decision["choice"] is None and decision["skipped_by_plan"] is True
+    assert decision["choice"]["slot_name"] == "MALICA 3"
+
+
+def test_old_custom_plan_carries_over_its_fallback(user):
+    row = fresh(user, menu_plan="custom", plan_slots='["MALICA 1", "MALICA 3"]',
+                plan_fallback=plans.SKIP)
+    assert plans.only_slot(row) == "MALICA 1"
 
 
 # --- the board ------------------------------------------------------------

@@ -38,23 +38,15 @@
     </div>
 
     {% if card.key == 'custom' %}
-    <fieldset class="custom-slots">
-      <legend>Izbiraj med</legend>
-      <div class="chip-row">
-        {% for name in slot_names %}
-        <label class="chip"><input type="checkbox" name="slots" value="{{ name }}"
-               {% if name in custom_slots %}checked{% endif %}><span>{{ slot_label(name) }}</span></label>
-        {% endfor %}
-      </div>
-      <label class="fallback-pick">Ko nič ne ustreza:
+    <div class="custom-slots">
+      <label class="fallback-pick">Naročaj samo meni:
         <select name="fallback_slot">
           {% for name in slot_names %}
-          <option value="{{ name }}" {% if custom_fallback == name %}selected{% endif %}>naroči {{ slot_label(name) }}</option>
+          <option value="{{ name }}" {% if only_slot == name %}selected{% endif %}>{{ slot_label(name) }}</option>
           {% endfor %}
-          <option value="{{ skip_value }}" {% if custom_fallback == skip_value %}selected{% endif %}>odjavi malico</option>
         </select>
       </label>
-    </fieldset>
+    </div>
     {% endif %}
 
     {% if card.preview %}

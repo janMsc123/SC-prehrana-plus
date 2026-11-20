@@ -60,10 +60,9 @@ PLANS = OrderedDict([
         "fallback": "MALICA 5",
     }),
     ("custom", {
-        "label": "Po meri",
-        "short": "Po meri",
-        "about": "Sam izbereš menije, med katerimi se izbira po lestvici, "
-                 "in kaj se naroči, ko nobeden ne ustreza.",
+        "label": "En meni",
+        "short": "En meni",
+        "about": "Vsak dan samodejno naroči samo meni, ki ga izbereš.",
         "slots": None,
         "fallback": None,
     }),
@@ -108,6 +107,16 @@ def custom_slots(user_row):
     return [s for s in SLOT_NAMES if s in chosen]
 
 
+def only_slot(user_row):
+    """The one menu the "En meni" plan orders every day. Older custom plans
+    stored a list plus a fallback; their fallback (or first menu) carries over."""
+    stored = _column(user_row, "plan_fallback")
+    if stored in SLOT_NAMES:
+        return stored
+    chosen = custom_slots(user_row)
+    return chosen[0] if chosen else SLOT_NAMES[0]
+
+
 def for_user(user_row, key=None, skip_floor=None):
     """The plan a user follows. `key`/`skip_floor` override the stored ones,
     which is how the menu page previews a plan before it is chosen."""
@@ -117,9 +126,8 @@ def for_user(user_row, key=None, skip_floor=None):
     if skip_floor is None:
         skip_floor = _column(user_row, "skip_floor", 0)
     if key == "custom":
-        slots = custom_slots(user_row) or None
-        fallback_slot = _column(user_row, "plan_fallback") or None
-        return Plan(key, slots, fallback_slot, skip_floor)
+        only = only_slot(user_row)
+        return Plan(key, (only,), only, skip_floor)
     spec = PLANS[key]
     return Plan(key, spec["slots"], spec["fallback"], skip_floor)
 

@@ -644,8 +644,7 @@ def menus_page(request: Request, user=Depends(require_user)):
         request, "menus.html", user,
         cards=cards, plan=current,
         slot_names=plans.SLOT_NAMES,
-        custom_slots=plans.custom_slots(user),
-        custom_fallback=user["plan_fallback"] or settings.fallback_slot_name,
+        only_slot=plans.only_slot(user),
         skip_value=plans.SKIP,
         floor=plans.floor_label(),
         saved=request.query_params.get("saved"),
@@ -664,8 +663,10 @@ def menus_set_plan(
         return RedirectResponse("/menus", status_code=303)
     chosen = [s for s in plans.SLOT_NAMES if s in slots]
     if plan == "custom":
-        if fallback_slot not in plans.SLOT_NAMES and fallback_slot != plans.SKIP:
-            fallback_slot = settings.fallback_slot_name
+        # "En meni": the one menu, ordered every day.
+        if fallback_slot not in plans.SLOT_NAMES:
+            fallback_slot = plans.only_slot(user)
+        chosen = [fallback_slot]
         db.execute(
             "UPDATE app_user SET menu_plan = ?, plan_slots = ?, plan_fallback = ? WHERE id = ?",
             (plan, json.dumps(chosen), fallback_slot, user["id"]),
