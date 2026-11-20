@@ -126,7 +126,7 @@
       </p>
 
       {% if day.locked %}
-      <p class="warn board-note">{% if day.time_locked %}Po 14:00 ni več mogoče naročati za danes in jutri.{% else %}Rok za spremembe je potekel.{% endif %}</p>
+      <p class="warn board-note">{% if day.time_locked %}Za ta dan je rok že potekel.{% else %}Rok za spremembe je potekel.{% endif %}</p>
       {% endif %}
       {% if day.override_stale %}
       <p class="warn board-note">Prejšnja izbira ni več na jedilniku.</p>
