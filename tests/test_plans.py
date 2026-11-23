@@ -109,6 +109,21 @@ def test_skip_floor_cancels_an_order_already_standing(user):
     assert decision["existing_order_to_cancel"] is True
 
 
+def test_manual_plan_chooses_nothing_and_cancels_nothing(user):
+    ids, client = week(MENU)
+    ranking.save_rating(user, ids[1], 90)
+    client._orders = [{"order_date": DAY, "menu_id": "s5", "menu_name": "MALICA 5",
+                       "canceled": False}]
+    decision = picker.plan(fresh(user, menu_plan="manual"), client, today=TODAY)[0]
+    assert decision["choice"] is None
+    assert decision["status"] == "skipped"
+    assert not decision.get("existing_order_to_cancel")
+
+
+def test_unknown_plan_falls_back_to_manual(user):
+    assert plans.for_user(fresh(user, menu_plan="gone")).key == "manual"
+
+
 def test_skip_floor_leaves_a_ranked_day_alone(user):
     ids, client = week(MENU)
     ranking.save_rating(user, ids[5], 60)

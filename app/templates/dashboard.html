@@ -32,6 +32,9 @@
     <form method="post" action="/run/collect" class="inline">
       <button class="btn" type="submit">Zberi jedilnik</button>
     </form>
+  {% elif plan.key != 'ranking' %}
+    <p>Meni: <strong>{{ plan.label }}</strong>.</p>
+    <a class="btn ghost" href="/menus">Zamenjaj meni</a>
   {% elif progress.to_rate %}
     <p><strong>{{ progress.to_rate }}</strong> jedi čaka na oceno.</p>
     <a class="btn" href="/rank">{{ 'Oceni nove jedi' if rated_anything else 'Oceni jedi' }}</a>

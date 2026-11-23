@@ -118,9 +118,9 @@ def login(username, password, remember=True):
         db.execute(
             """INSERT INTO app_user (id, username, password_enc, school_user_id,
                                      first_name, last_name, class_name,
-                                     location_id, autopilot, created_at,
-                                     last_login_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+                                     location_id, autopilot, menu_plan,
+                                     created_at, last_login_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'manual', ?, ?)""",
             (
                 user_id,
                 username,

@@ -3,7 +3,7 @@
 The ranking says what you like; a plan narrows where to look for it. "Vegi"
 means MALICA 2 every day, whatever else is on; "hladna malica" means only the
 cold lines, MALICA 5 and 6, whichever of the two you rank higher. A plan is a
-per-user setting and applies to every day that has no choice made by hand --
+per-user setting ("manual", the default, chooses nothing) and applies to every day that has no choice made by hand --
 a hand-made choice still beats it, exactly as it beats the ranking.
 
 Each plan is two things:
@@ -35,11 +35,22 @@ SKIP = "__skip__"
 
 SLOT_NAMES = tuple("MALICA {}".format(n) for n in range(1, 8))
 
+#: The plan a new user starts on: nothing is chosen for them.
+DEFAULT_PLAN = "manual"
+
 PLANS = OrderedDict([
+    ("manual", {
+        "label": "Ročno",
+        "short": "Ročno",
+        "about": "Nič se ne izbere samo. Naroči se samo to, kar izbereš na dan; "
+                 "kar je že naročeno pri šoli, ostane.",
+        "slots": (),
+        "fallback": None,
+    }),
     ("ranking", {
-        "label": "Po lestvici",
-        "short": "Lestvica",
-        "about": "Vsak dan najvišja jed s tvoje lestvice, ne glede na to, "
+        "label": "Avtomatsko naročanje",
+        "short": "Avtomatsko",
+        "about": "Vsak dan samodejno naroči najvišjo jed s tvoje lestvice, ne glede na to, "
                  "v katerem meniju je.",
         "slots": None,
         "fallback": None,
@@ -120,9 +131,9 @@ def only_slot(user_row):
 def for_user(user_row, key=None, skip_floor=None):
     """The plan a user follows. `key`/`skip_floor` override the stored ones,
     which is how the menu page previews a plan before it is chosen."""
-    key = key or _column(user_row, "menu_plan", "ranking")
+    key = key or _column(user_row, "menu_plan", DEFAULT_PLAN)
     if key not in PLANS:
-        key = "ranking"
+        key = DEFAULT_PLAN
     if skip_floor is None:
         skip_floor = _column(user_row, "skip_floor", 0)
     if key == "custom":
@@ -143,7 +154,10 @@ def choose(slots, plan):
       ("fallback")       the school-wide floor
       (None, "skip")     the floor would have been ordered, but skip_floor is on
       (None, None)       nothing at all could be chosen
+      (None, "manual")   the manual plan: nothing is chosen, nothing cancelled
     """
+    if plan.key == "manual":
+        return None, "manual"
     best = None
     for slot in slots:
         if not plan.allows(slot["slot_name"]) or slot["excluded"]:

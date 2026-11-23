@@ -174,6 +174,13 @@ def plan(user_row, client, today=None):
             decision["reason"] = reason
             decision["is_fallback"] = reason in ("fallback", "plan_fallback")
 
+            if reason == "manual":
+                # Manual plan: only hand picks act. What stands at school stays.
+                decision["status"] = "skipped"
+                decision["detail"] = "ročno, brez izbire"
+                decisions.append(decision)
+                continue
+
             if reason == "skip":
                 # The plan says no lunch rather than the floor (or a custom
                 # plan's fallback is "sign off"). Same as signing off by hand,
